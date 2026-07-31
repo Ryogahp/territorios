@@ -344,7 +344,7 @@ const PERSONAS = [
           const checks = row.querySelectorAll('.cb-checkbox:checked');
           if (!select.value || checks.length === 0) return;
           territorios.push({
-            numero: parseInt(select.value, 10),
+            territorio_id: parseInt(select.value, 10),
             cuadras: ordenarUnicas(Array.from(checks, (cb) => cb.value)),
           });
         });
@@ -353,7 +353,7 @@ const PERSONAS = [
         const principal = parseInt(territorioSelect.value, 10);
         if (principal && checkPrincipal.length > 0) {
           territorios.unshift({
-            numero: principal,
+            territorio_id: principal,
             cuadras: ordenarUnicas(Array.from(checkPrincipal, (cb) => cb.value)),
           });
         }
