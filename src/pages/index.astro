@@ -1,0 +1,578 @@
+---
+import '../styles/global.css';
+import { TERRITORIOS } from '../lib/territorios';
+
+const PERSONAS = [
+  "Elias Ureña",
+  "Francisco Peña",
+  "Franklyn Núñez",
+  "Gianni del Villar",
+  "Iván Betances",
+  "Jairo del Villar",
+  "Jeuri Pichardo",
+  "Joel Rodríguez",
+  "Jonathan Ceballos",
+  "José Guillermo Tejada",
+  "Luis Damián Frías",
+  "Miguel A. del Villar",
+  "Miguel del Villar hijo",
+  "Noel Tapia",
+  "Radhamés Bencosme",
+  "Richard Melo",
+  "Víctor Guzmán",
+];
+---
+
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registro de Territorios</title>
+  </head>
+  <body class="bg-charcoal text-charcoal min-h-screen font-sans">
+    <div id="app" class="max-w-[1200px] mx-auto p-4">
+      <header class="bg-stone text-white px-6 pt-4 rounded-lg mb-6">
+        <h1 class="text-2xl font-semibold mb-2">Registro de Territorios Visitados</h1>
+        <nav class="flex">
+          <button class="tab active bg-transparent text-white/70 hover:bg-white/10 hover:text-white border-none px-4 py-2 text-sm font-medium cursor-pointer rounded-t-lg transition-colors" data-tab="registro">
+            Registro
+          </button>
+          <button class="tab bg-transparent text-white/70 hover:bg-white/10 hover:text-white border-none px-4 py-2 text-sm font-medium cursor-pointer rounded-t-lg transition-colors" data-tab="pendientes">
+            Lista de territorios por visitar
+          </button>
+        </nav>
+      </header>
+
+      <main class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
+        <aside class="bg-mist p-6 rounded-lg h-fit">
+          <h2 class="text-lg font-semibold mb-4 text-charcoal border-b-2 border-stone pb-2">
+            Registrar visita
+          </h2>
+          <form id="visitaForm" class="flex flex-col gap-3">
+            <label class="flex flex-col gap-1 font-medium text-sm">
+              Fecha
+              <input
+                type="date"
+                id="fecha"
+                required
+                class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1"
+              />
+            </label>
+
+            <label class="flex flex-col gap-1 font-medium text-sm">
+              Persona
+              <input
+                type="text"
+                id="persona"
+                required
+                list="listaPersonas"
+                placeholder="Escribe o elige una persona"
+                class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1"
+              />
+              <datalist id="listaPersonas">
+                {PERSONAS.map((p) => (
+                  <option value={p}></option>
+                ))}
+              </datalist>
+            </label>
+
+            <label class="flex flex-col gap-1 font-medium text-sm">
+              Territorio
+              <select id="territorio" required class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1">
+                <option value="">Selecciona un territorio</option>
+                {TERRITORIOS.map((t) => (
+                  <option value={t.numero}>Territorio {t.numero} — {t.letras.length} cuadras</option>
+                ))}
+              </select>
+            </label>
+
+            <label class="flex flex-col gap-1 font-medium text-sm">
+              Cuadras visitadas
+              <div id="cuadrasCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 bg-white rounded p-2 border border-stone"></div>
+            </label>
+
+            <button type="submit" class="bg-stone text-white px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-[#2a5a74] border-none">
+              Guardar visita
+            </button>
+            <button type="button" id="addTerritorioBtn" class="bg-transparent text-stone border border-dashed border-stone px-2 py-2 rounded text-sm cursor-pointer transition-colors hover:bg-stone/10">
+              + Agregar otro territorio (máx. 3)
+            </button>
+          </form>
+
+          <p id="formMessage" class="font-medium mt-4 text-sm"></p>
+        </aside>
+
+        <section id="contentRegistro" class="bg-mist p-6 rounded-lg">
+          <h2 class="text-lg font-semibold mb-4 text-charcoal border-b-2 border-stone pb-2">
+            Historial de visitas
+          </h2>
+          <p id="statusMessage" class="font-medium mb-4 text-sm"></p>
+          <div id="tablaContainer" class="overflow-x-auto"></div>
+        </section>
+
+        <section id="contentPendientes" class="bg-mist p-6 rounded-lg hidden">
+          <h2 class="text-lg font-semibold mb-4 text-charcoal border-b-2 border-stone pb-2">
+            Territorios por visitar
+          </h2>
+          <div id="territoriosList" class="flex flex-col gap-3 max-h-[70vh] overflow-y-auto"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="territoriosData" data-territorios={JSON.stringify(TERRITORIOS)} hidden></div>
+
+    <script is:inline>
+      // Elementos del DOM
+      const form = document.getElementById('visitaForm');
+      const fechaInput = document.getElementById('fecha');
+      const personaInput = document.getElementById('persona');
+      const territorioSelect = document.getElementById('territorio');
+      const cuadrasCheckboxes = document.getElementById('cuadrasCheckboxes');
+      const addTerritorioBtn = document.getElementById('addTerritorioBtn');
+      const formMessage = document.getElementById('formMessage');
+      const statusMessage = document.getElementById('statusMessage');
+      const tablaContainer = document.getElementById('tablaContainer');
+      const territoriosList = document.getElementById('territoriosList');
+
+      // Datos locales de territorios (espejo del frontmatter)
+      const TERRITORIOS = JSON.parse(document.getElementById('territoriosData').dataset.territorios);
+      const territoriosLetras = Object.fromEntries(TERRITORIOS.map((t) => [t.numero, t.letras]));
+
+      // Estado global: visitas cargadas y contador de filas de territorio en el form
+      let visitas = [];
+      let filasTerritorio = 1;
+
+      // ---- Pestañas: muestra el contenido de la pestaña activa ----
+      const tabs = document.querySelectorAll('.tab');
+      const tabContents = {
+        registro: document.getElementById('contentRegistro'),
+        pendientes: document.getElementById('contentPendientes'),
+      };
+
+      tabs.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          tabs.forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          Object.values(tabContents).forEach((c) => c.classList.add('hidden'));
+          tabContents[btn.dataset.tab].classList.remove('hidden');
+        });
+      });
+
+      // ---- Formato de fecha a dd/mm/aaaa para mostrar en la tabla ----
+      function formatearFecha(iso) {
+        const f = new Date(iso + 'T00:00:00');
+        const d = String(f.getDate()).padStart(2, '0');
+        const m = String(f.getMonth() + 1).padStart(2, '0');
+        return d + '/' + m + '/' + f.getFullYear();
+      }
+
+      // ---- Convierte cuadras (array o cadena "A,C-E,H") a una lista de letras ----
+      function expandirCuadras(cuadras) {
+        if (Array.isArray(cuadras)) return cuadras.map((l) => String(l).toUpperCase());
+        if (!cuadras) return [];
+        const lista = [];
+        String(cuadras).split(',').forEach((parte) => {
+          const m = parte.trim().match(/^([A-Za-z])(?:-([A-Za-z]))?$/);
+          if (!m) return;
+          let c = m[1].toUpperCase().charCodeAt(0);
+          const fin = m[2] ? m[2].toUpperCase().charCodeAt(0) : c;
+          for (; c <= fin; c++) lista.push(String.fromCharCode(c));
+        });
+        return lista;
+      }
+
+      // ---- Ordena y elimina duplicados de una lista de letras ----
+      function ordenarUnicas(lista) {
+        return [...new Set(lista.map((l) => String(l).toUpperCase()))].sort();
+      }
+
+      // ---- Cuántos días pasaron desde una fecha ISO hasta hoy ----
+      function calcularDias(iso) {
+        const fecha = new Date(iso + 'T00:00:00');
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        return Math.round((hoy - fecha) / 86400000);
+      }
+
+      // ---- Muestra un mensaje en el form (error en rojo / éxito en verde) ----
+      function setFormMessage(msg, tipo) {
+        formMessage.textContent = msg;
+        formMessage.classList.remove('text-autumn', 'text-green-700');
+        formMessage.classList.add(tipo === 'error' ? 'text-autumn' : 'text-green-700');
+      }
+
+      // ---- Genera los checkboxes de cuadras para una fila de territorio ----
+      function renderCuadras() {
+        cuadrasCheckboxes.innerHTML = '';
+        const numero = parseInt(territorioSelect.value, 10);
+        const letras = territoriosLetras[numero];
+        if (!letras) return;
+
+        const contador = document.createElement('div');
+        contador.className = 'col-span-full text-sm text-gray-600 mb-1';
+        contador.id = 'contadorSeleccion';
+        contador.textContent = '0 seleccionadas de ' + letras.length;
+        cuadrasCheckboxes.appendChild(contador);
+
+        letras.forEach((letra) => {
+          const label = document.createElement('label');
+          label.className = 'cb-label flex items-center gap-1 text-sm cursor-pointer bg-gray-50 border border-gray-300 rounded px-2 py-1 transition-colors hover:bg-gray-100';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = letra;
+          checkbox.className = 'cb-checkbox cursor-pointer';
+          label.appendChild(checkbox);
+          label.appendChild(document.createTextNode(letra));
+          cuadrasCheckboxes.appendChild(label);
+        });
+
+        const contadorSeleccion = document.getElementById('contadorSeleccion');
+        cuadrasCheckboxes.querySelectorAll('.cb-checkbox').forEach((cb) => {
+          cb.addEventListener('change', () => {
+            const seleccionadas = cuadrasCheckboxes.querySelectorAll('.cb-checkbox:checked').length;
+            contadorSeleccion.textContent = seleccionadas + ' seleccionadas de ' + letras.length;
+          });
+        });
+      }
+
+      // ---- Crea una fila de territorio adicional en el form (máx. 3) ----
+      function createTerritorioRow() {
+        const row = document.createElement('div');
+        row.className = 'territorio-row bg-white/40 rounded-md p-3 border border-stone';
+
+        const header = document.createElement('div');
+        header.className = 'row-header flex justify-between items-center mb-2';
+        const label = document.createElement('span');
+        label.className = 'row-label font-medium text-sm';
+        label.textContent = 'Territorio ' + filasTerritorio;
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-row bg-transparent border-none text-autumn cursor-pointer font-bold text-sm hover:underline';
+        removeBtn.textContent = '✕ Eliminar';
+        header.appendChild(label);
+        header.appendChild(removeBtn);
+        row.appendChild(header);
+
+        const select = document.createElement('select');
+        select.className = 'territorio-select w-full px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1 mb-2';
+        select.innerHTML = territorioSelect.innerHTML;
+        select.value = '';
+        row.appendChild(select);
+
+        const cbs = document.createElement('div');
+        cbs.className = 'cuadras-checkboxes grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 bg-white rounded p-2 border border-stone';
+        row.appendChild(cbs);
+
+        const hint = document.createElement('p');
+        hint.className = 'select-hint text-sm text-gray-600 mt-2';
+        hint.textContent = 'Selecciona un territorio para ver sus cuadras.';
+        row.appendChild(hint);
+
+        return row;
+      }
+
+      // ---- Pinta los checkboxes de cuadras de la fila seleccionada ----
+      function renderCuadrasFila(row, letras) {
+        const cbs = row.querySelector('.cuadras-checkboxes');
+        const hint = row.querySelector('.select-hint');
+        cbs.innerHTML = '';
+        hint.textContent = '';
+
+        if (!letras) {
+          hint.textContent = 'Selecciona un territorio para ver sus cuadras.';
+          return;
+        }
+
+        const contador = document.createElement('div');
+        contador.className = 'col-span-full text-sm text-gray-600 mb-1';
+        contador.textContent = '0 seleccionadas de ' + letras.length;
+        cbs.appendChild(contador);
+
+        letras.forEach((letra) => {
+          const label = document.createElement('label');
+          label.className = 'cb-label flex items-center gap-1 text-sm cursor-pointer bg-gray-50 border border-gray-300 rounded px-2 py-1 transition-colors hover:bg-gray-100';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = letra;
+          checkbox.className = 'cb-checkbox cursor-pointer';
+          label.appendChild(checkbox);
+          label.appendChild(document.createTextNode(letra));
+          cbs.appendChild(label);
+        });
+
+        cbs.querySelectorAll('.cb-checkbox').forEach((cb) => {
+          cb.addEventListener('change', () => {
+            const seleccionadas = cbs.querySelectorAll('.cb-checkbox:checked').length;
+            contador.textContent = seleccionadas + ' seleccionadas de ' + letras.length;
+          });
+        });
+      }
+
+      // ---- Configura la fila extra: selector + checkboxes por territorio ----
+      function setupFilaExtra(row) {
+        const select = row.querySelector('.territorio-select');
+        select.addEventListener('change', () => {
+          const numero = parseInt(select.value, 10);
+          renderCuadrasFila(row, numero ? territoriosLetras[numero] : null);
+        });
+        row.querySelector('.remove-row').addEventListener('click', () => {
+          row.remove();
+          filasTerritorio--;
+          reetiquetarFilas();
+          actualizarBotones();
+        });
+      }
+
+      // ---- Re-numera los encabezados de cada fila de territorio ----
+      function reetiquetarFilas() {
+        document.querySelectorAll('.row-label').forEach((el, idx) => {
+          el.textContent = 'Territorio ' + (idx + 1);
+        });
+      }
+
+      // ---- Muestra/oculta el botón "+ Agregar otro territorio" ----
+      function actualizarBotones() {
+        addTerritorioBtn.style.display = filasTerritorio >= 3 ? 'none' : 'inline-block';
+      }
+
+      // ---- Recopila los datos de las filas del form y valida el máximo de 3 ----
+      function recolectarDatos() {
+        const territorios = [];
+        const rows = document.querySelectorAll('.territorio-row');
+        rows.forEach((row) => {
+          const select = row.querySelector('.territorio-select');
+          const checks = row.querySelectorAll('.cb-checkbox:checked');
+          if (!select.value || checks.length === 0) return;
+          territorios.push({
+            numero: parseInt(select.value, 10),
+            cuadras: ordenarUnicas(Array.from(checks, (cb) => cb.value)),
+          });
+        });
+
+        const checkPrincipal = cuadrasCheckboxes.querySelectorAll('.cb-checkbox:checked');
+        const principal = parseInt(territorioSelect.value, 10);
+        if (principal && checkPrincipal.length > 0) {
+          territorios.unshift({
+            numero: principal,
+            cuadras: ordenarUnicas(Array.from(checkPrincipal, (cb) => cb.value)),
+          });
+        }
+
+        if (territorios.length === 0) {
+          setFormMessage('Selecciona al menos un territorio y sus cuadras.', 'error');
+          return null;
+        }
+        if (territorios.length > 3) {
+          setFormMessage('Máximo 3 territorios por persona y día.', 'error');
+          return null;
+        }
+        return territorios;
+      }
+
+      // ---- Envía la visita (o varias) al servidor ----
+      async function enviarVisita(e) {
+        e.preventDefault();
+        const territorios = recolectarDatos();
+        if (!territorios) return;
+
+        const fecha = fechaInput.value;
+        const persona = personaInput.value.trim();
+
+        if (!fecha) {
+          setFormMessage('Debes indicar la fecha.', 'error');
+          return;
+        }
+        if (!persona) {
+          setFormMessage('Debes indicar la persona.', 'error');
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/visitas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fecha, persona, territorios }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Error al guardar la visita');
+
+          const cantidad = territorios.length;
+          setFormMessage(
+            'Visita' + (cantidad > 1 ? 's' : '') + ' guardada' + (cantidad > 1 ? 's' : '') + ' correctamente (' + cantidad + ' territorio' + (cantidad > 1 ? 's' : '') + ').',
+            'success'
+          );
+
+          form.reset();
+          document.querySelectorAll('.territorio-row').forEach((row) => row.remove());
+          filasTerritorio = 1;
+          actualizarBotones();
+          renderCuadras();
+
+          await cargarVisitas();
+        } catch (err) {
+          setFormMessage(err.message, 'error');
+        }
+      }
+
+      // ---- Carga las visitas desde el servidor y actualiza la interfaz ----
+      async function cargarVisitas() {
+        try {
+          const res = await fetch('/api/visitas');
+          if (!res.ok) throw new Error('Error al cargar las visitas');
+          visitas = await res.json();
+          renderTabla();
+          renderTerritorios();
+        } catch (err) {
+          statusMessage.textContent = err.message;
+          statusMessage.classList.remove('text-green-700');
+          statusMessage.classList.add('text-autumn');
+        }
+      }
+
+      // ---- Construye la tabla de visitas agrupada por territorio ----
+      function renderTabla() {
+        const agrupado = {};
+        TERRITORIOS.forEach((t) => { agrupado[t.numero] = []; });
+        visitas.forEach((v) => {
+          if (agrupado[v.territorio_id]) agrupado[v.territorio_id].push(v);
+        });
+
+        const filas = [];
+        const noVisitados = [];
+        let conteo = 0;
+
+        TERRITORIOS.forEach((t, idx) => {
+          const visitasTerr = agrupado[t.numero];
+          if (visitasTerr.length === 0) noVisitados.push(t.numero);
+          const grupo = idx % 2 === 0 ? 'grupoA' : 'grupoB';
+
+          if (idx === 0) {
+            filas.push(`
+              <tr class="territorio-group ${grupo}">
+                <td colspan="4" class="td-grupo px-2 py-1.5 border-b border-gray-300 bg-gradient-to-r from-[#cfe1ee] to-[#a9c8de] font-bold text-stone text-sm">
+                  Grupo A — Territorios 1 a 29
+                </td>
+              </tr>
+            `);
+          } else if (idx === 29) {
+            filas.push(`
+              <tr class="territorio-group ${grupo}">
+                <td colspan="4" class="td-grupo px-2 py-1.5 border-b border-gray-300 bg-gradient-to-r from-[#e8dbc3] to-[#d8c094] font-bold text-stone text-sm">
+                  Grupo B — Territorios 30 a 58
+                </td>
+              </tr>
+            `);
+          }
+
+          filas.push(`
+            <tr class="territorio-row-tabla ${grupo}">
+              <td class="td-terr px-2 py-1.5 border-b border-gray-300 font-semibold text-sm text-center bg-gradient-to-r ${idx % 2 === 0 ? 'from-[#d7e5f0] to-[#b9d4e6]' : 'from-[#f0ead9] to-[#e3d7b8]'}">
+                Territorio ${t.numero}
+              </td>
+              <td class="px-2 py-1.5 border-b border-gray-300 ${idx % 2 === 0 ? 'bg-[#f4f8fb]' : 'bg-[#fbfaf5]'} hover:bg-[#e3edf4] transition-colors">
+                <strong>${visitasTerr.length}</strong>
+              </td>
+              <td class="px-2 py-1.5 border-b border-gray-300 ${idx % 2 === 0 ? 'bg-[#f4f8fb]' : 'bg-[#fbfaf5]'} hover:bg-[#e3edf4] transition-colors">
+                ${visitasTerr.map((v) => `${v.persona} (${formatearFecha(v.fecha)})`).join('<br/>') || '<span class="text-gray-400 italic">Sin visitas</span>'}
+              </td>
+              <td class="px-2 py-1.5 border-b border-gray-300 ${idx % 2 === 0 ? 'bg-[#f4f8fb]' : 'bg-[#fbfaf5]'} hover:bg-[#e3edf4] transition-colors">
+                ${visitasTerr.map((v) => (Array.isArray(v.cuadras) ? v.cuadras.join(', ') : v.cuadras)).join('<br/>') || '<span class="text-gray-400 italic">—</span>'}
+              </td>
+            </tr>
+          `);
+          conteo += visitasTerr.length;
+        });
+
+        tablaContainer.innerHTML = `
+          <table class="w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                <th class="px-2 py-2 text-left bg-stone text-white sticky top-0">Territorio</th>
+                <th class="px-2 py-2 text-center bg-stone text-white sticky top-0">#</th>
+                <th class="px-2 py-2 text-left bg-stone text-white sticky top-0">Persona y fecha</th>
+                <th class="px-2 py-2 text-left bg-stone text-white sticky top-0">Cuadras</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filas.join('')}
+            </tbody>
+          </table>
+        `;
+
+        statusMessage.textContent =
+          'Total de visitas registradas: ' + conteo + '. Territorios sin visitar: ' +
+          (noVisitados.length > 0 ? noVisitados.join(', ') : 'ninguno');
+        statusMessage.classList.remove('text-autumn');
+        statusMessage.classList.add('text-green-700');
+      }
+
+      // ---- Renderiza las tarjetas de territorios pendientes ----
+      function renderTerritorios() {
+        const lista = TERRITORIOS.map((t) => {
+          const visitasTerr = visitas.filter((v) => v.territorio_id === t.numero);
+          const cuadrasVisitadas = new Set();
+          visitasTerr.forEach((v) => {
+            expandirCuadras(v.cuadras).forEach((c) => cuadrasVisitadas.add(c));
+          });
+          const faltantes = [];
+          t.letras.forEach((letra) => {
+            if (!cuadrasVisitadas.has(letra)) faltantes.push(letra);
+          });
+          const ultima = visitasTerr
+            .map((v) => v.fecha)
+            .sort((a, b) => b.localeCompare(a))[0];
+
+          return {
+            numero: t.numero,
+            total: t.letras.length,
+            visitadas: cuadrasVisitadas.size,
+            faltantes,
+            ultimaFecha: ultima || null,
+          };
+        });
+
+        territoriosList.innerHTML = lista
+          .map((t) => {
+            const pct = (t.visitadas / t.total) * 100;
+            const borderClass = t.ultimaFecha ? 'border-l-stone' : 'border-l-autumn';
+            return `
+              <div class="territorio-card bg-white rounded-md px-4 py-3 border-l-4 ${borderClass}">
+                <div class="flex justify-between items-center mb-1">
+                  <span class="font-semibold text-base">Territorio ${t.numero}</span>
+                  <span class="text-xs text-gray-500">
+                    ${t.ultimaFecha ? 'Última visita: ' + t.ultimaFecha + ' (' + calcularDias(t.ultimaFecha) + ' días)' : 'Nunca visitado'}
+                  </span>
+                </div>
+                <div class="h-1.5 bg-gray-200 rounded overflow-hidden mb-1">
+                  <div class="h-full bg-stone rounded" style="width: ${pct}%"></div>
+                </div>
+                <div class="text-sm">
+                  <p class="my-0.5"><strong>${t.visitadas}/${t.total}</strong> cuadras visitadas</p>
+                  <p class="my-0.5 text-autumn font-medium">Faltantes: ${t.faltantes.join(', ')}</p>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      // ---- Inicialización: eventos y carga de datos ----
+      fechaInput.valueAsDate = new Date();
+      renderCuadras();
+      actualizarBotones();
+
+      territorioSelect.addEventListener('change', renderCuadras);
+      addTerritorioBtn.addEventListener('click', () => {
+        if (filasTerritorio >= 3) return;
+        filasTerritorio++;
+        const row = createTerritorioRow();
+        form.insertBefore(row, addTerritorioBtn);
+        setupFilaExtra(row);
+        actualizarBotones();
+      });
+
+      form.addEventListener('submit', enviarVisita);
+      cargarVisitas();
+    </script>
+  </body>
+</html>

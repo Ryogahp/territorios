@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* Paleta de colores del proyecto (se usan como bg-mist, text-stone, etc.) */
+@theme {
+  --color-mist: #90AFC5;
+  --color-stone: #336B87;
+  --color-charcoal: #2A3132;
+  --color-autumn: #763626;
+}
+
+/* Línea separadora entre grupos de territorio en la tabla */
+.territorio-group td {
+  @apply border-b-2 border-stone;
+}
+
+/* Pestaña activa */
+.tab.active {
+  @apply bg-mist text-charcoal hover:bg-mist hover:text-charcoal;
+}
