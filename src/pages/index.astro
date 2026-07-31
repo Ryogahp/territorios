@@ -91,8 +91,11 @@ const PERSONAS = [
               <div id="cuadrasCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 bg-white rounded p-2 border border-stone"></div>
             </label>
 
-            <button type="submit" class="bg-stone text-white px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-[#2a5a74] border-none">
+            <button type="submit" id="submitBtn" class="bg-stone text-white px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-[#2a5a74] border-none">
               Guardar visita
+            </button>
+            <button type="button" id="cancelEditBtn" class="hidden bg-transparent text-autumn border border-autumn px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-autumn/10">
+              Cancelar edición
             </button>
             <button type="button" id="addTerritorioBtn" class="bg-transparent text-stone border border-dashed border-stone px-2 py-2 rounded text-sm cursor-pointer transition-colors hover:bg-stone/10">
               + Agregar otro territorio (máx. 3)
@@ -129,6 +132,8 @@ const PERSONAS = [
       const territorioSelect = document.getElementById('territorio');
       const cuadrasCheckboxes = document.getElementById('cuadrasCheckboxes');
       const addTerritorioBtn = document.getElementById('addTerritorioBtn');
+      const submitBtn = document.getElementById('submitBtn');
+      const cancelEditBtn = document.getElementById('cancelEditBtn');
       const formMessage = document.getElementById('formMessage');
       const statusMessage = document.getElementById('statusMessage');
       const tablaContainer = document.getElementById('tablaContainer');
@@ -141,6 +146,7 @@ const PERSONAS = [
       // Estado global: visitas cargadas y contador de filas de territorio en el form
       let visitas = [];
       let filasTerritorio = 1;
+      let editandoId = null;
 
       // ---- Pestañas: muestra el contenido de la pestaña activa ----
       const tabs = document.querySelectorAll('.tab');
@@ -332,6 +338,10 @@ const PERSONAS = [
 
       // ---- Muestra/oculta el botón "+ Agregar otro territorio" ----
       function actualizarBotones() {
+        if (editandoId) {
+          addTerritorioBtn.style.display = 'none';
+          return;
+        }
         addTerritorioBtn.style.display = filasTerritorio >= 3 ? 'none' : 'inline-block';
       }
 
@@ -388,26 +398,84 @@ const PERSONAS = [
         }
 
         try {
-          const res = await fetch('/api/visitas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fecha, persona, territorios }),
-          });
+          const res = editandoId
+            ? await fetch('/api/visitas', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: editandoId, fecha, persona, territorios }),
+              })
+            : await fetch('/api/visitas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fecha, persona, territorios }),
+              });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Error al guardar la visita');
 
           const cantidad = territorios.length;
           setFormMessage(
-            'Visita' + (cantidad > 1 ? 's' : '') + ' guardada' + (cantidad > 1 ? 's' : '') + ' correctamente (' + cantidad + ' territorio' + (cantidad > 1 ? 's' : '') + ').',
+            (editandoId ? 'Visita actualizada' : 'Visita' + (cantidad > 1 ? 's' : '') + ' guardada' + (cantidad > 1 ? 's' : '') + ' correctamente') + ' (' + cantidad + ' territorio' + (cantidad > 1 ? 's' : '') + ').',
             'success'
           );
 
-          form.reset();
-          document.querySelectorAll('.territorio-row').forEach((row) => row.remove());
-          filasTerritorio = 1;
-          actualizarBotones();
-          renderCuadras();
+          cancelarEdicion();
+          await cargarVisitas();
+        } catch (err) {
+          setFormMessage(err.message, 'error');
+        }
+      }
 
+      // ---- Carga una visita en el formulario para editarla ----
+      function editarVisita(btn) {
+        editandoId = Number(btn.dataset.id);
+        fechaInput.value = btn.dataset.fecha;
+        personaInput.value = btn.dataset.persona;
+        territorioSelect.value = btn.dataset.territorio;
+
+        document.querySelectorAll('.territorio-row').forEach((row) => row.remove());
+        filasTerritorio = 1;
+
+        renderCuadras();
+        const cuadras = JSON.parse(btn.dataset.cuadras);
+        cuadrasCheckboxes.querySelectorAll('.cb-checkbox').forEach((cb) => {
+          cb.checked = cuadras.includes(cb.value);
+        });
+        const contador = document.getElementById('contadorSeleccion');
+        if (contador) {
+          const total = territoriosLetras[Number(btn.dataset.territorio)].length;
+          contador.textContent = cuadrasCheckboxes.querySelectorAll('.cb-checkbox:checked').length + ' seleccionadas de ' + total;
+        }
+
+        submitBtn.textContent = 'Actualizar visita';
+        cancelEditBtn.classList.remove('hidden');
+        actualizarBotones();
+        setFormMessage('Editando visita. Cambia los datos y pulsa "Actualizar visita".', 'success');
+        form.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      // ---- Sale del modo edición y limpia el formulario ----
+      function cancelarEdicion() {
+        editandoId = null;
+        submitBtn.textContent = 'Guardar visita';
+        cancelEditBtn.classList.add('hidden');
+        form.reset();
+        document.querySelectorAll('.territorio-row').forEach((row) => row.remove());
+        filasTerritorio = 1;
+        renderCuadras();
+        actualizarBotones();
+      }
+
+      // ---- Elimina un registro de visita tras confirmar ----
+      async function eliminarVisita(id) {
+        if (!confirm('¿Eliminar este registro de visita?')) return;
+        try {
+          const res = await fetch('/api/visitas', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Error al eliminar la visita');
           await cargarVisitas();
         } catch (err) {
           setFormMessage(err.message, 'error');
@@ -473,7 +541,15 @@ const PERSONAS = [
                 <strong>${visitasTerr.length}</strong>
               </td>
               <td class="px-2 py-1.5 border-b border-gray-300 ${idx % 2 === 0 ? 'bg-[#f4f8fb]' : 'bg-[#fbfaf5]'} hover:bg-[#e3edf4] transition-colors">
-                ${visitasTerr.map((v) => `${v.persona} (${formatearFecha(v.fecha)})`).join('<br/>') || '<span class="text-gray-400 italic">Sin visitas</span>'}
+                ${visitasTerr.map((v) => {
+                  const btns = `
+                    <button class="btn-edit text-[11px] text-stone underline cursor-pointer border-none bg-transparent p-0 ml-1 hover:text-[#2a5a74]"
+                      data-id="${v.id}" data-fecha="${v.fecha}" data-persona="${v.persona.replace(/"/g, '&quot;')}" data-territorio="${v.territorio_id}"
+                      data-cuadras='${JSON.stringify(v.cuadras)}'>Editar</button>
+                    <button class="btn-delete text-[11px] text-autumn underline cursor-pointer border-none bg-transparent p-0 ml-1"
+                      data-id="${v.id}">Eliminar</button>`;
+                  return `${v.persona} (${formatearFecha(v.fecha)}) ${btns}`;
+                }).join('<br/>') || '<span class="text-gray-400 italic">Sin visitas</span>'}
               </td>
               <td class="px-2 py-1.5 border-b border-gray-300 ${idx % 2 === 0 ? 'bg-[#f4f8fb]' : 'bg-[#fbfaf5]'} hover:bg-[#e3edf4] transition-colors">
                 ${visitasTerr.map((v) => (Array.isArray(v.cuadras) ? v.cuadras.join(', ') : v.cuadras)).join('<br/>') || '<span class="text-gray-400 italic">—</span>'}
@@ -570,6 +646,19 @@ const PERSONAS = [
       actualizarBotones();
 
       territorioSelect.addEventListener('change', renderCuadras);
+      cancelEditBtn.addEventListener('click', cancelarEdicion);
+
+      // Delegación de eventos para los botones de Editar/Eliminar de la tabla
+      tablaContainer.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.btn-edit');
+        if (editBtn) {
+          editarVisita(editBtn);
+          return;
+        }
+        const delBtn = e.target.closest('.btn-delete');
+        if (delBtn) eliminarVisita(delBtn.dataset.id);
+      });
+
       addTerritorioBtn.addEventListener('click', () => {
         if (filasTerritorio >= 3) return;
         filasTerritorio++;
