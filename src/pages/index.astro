@@ -3,23 +3,23 @@ import '../styles/global.css';
 import { TERRITORIOS } from '../lib/territorios';
 
 const PERSONAS = [
-  "Elias Ureña",
-  "Francisco Peña",
-  "Franklyn Núñez",
-  "Gianni del Villar",
-  "Iván Betances",
-  "Jairo del Villar",
-  "Jeuri Pichardo",
-  "Joel Rodríguez",
-  "Jonathan Ceballos",
-  "José Guillermo Tejada",
-  "Luis Damián Frías",
-  "Miguel A. del Villar",
-  "Miguel del Villar hijo",
-  "Noel Tapia",
-  "Radhamés Bencosme",
-  "Richard Melo",
-  "Víctor Guzmán",
+  "Jose Luis Huanca Cruz",
+  "Alex Smith",
+  "Andres Tarqui",
+  "Enrique Callisaya",
+  "Fernando Figueredo",
+  "Franklin Salas",
+  "Jherson Zegarra",
+  "Jose Alvares",
+  "Jose Luis Van Geendertailen",
+  "Manuel Villegas",
+  "Marco Sanchez",
+  "Marcos Fernadez",
+  "Mauricio Mendez",
+  "Mike Mamani",
+  "Oscar Callizaya",
+  "Ramiro Narvaes",
+  "Victor Villegas",
 ];
 ---
 
@@ -529,6 +529,14 @@ const PERSONAS = [
             faltantes,
             ultimaFecha: ultima || null,
           };
+        });
+
+        // Ordena: los que hace más tiempo que no se visitan al inicio, los recién visitados al final
+        lista.sort((a, b) => {
+          if (!a.ultimaFecha && !b.ultimaFecha) return a.numero - b.numero;
+          if (!a.ultimaFecha) return -1;
+          if (!b.ultimaFecha) return 1;
+          return a.ultimaFecha.localeCompare(b.ultimaFecha);
         });
 
         territoriosList.innerHTML = lista
