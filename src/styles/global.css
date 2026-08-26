@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+html {
+  color-scheme: light;
+}
+
 /* Paleta de colores del proyecto (se usan como bg-mist, text-stone, etc.) */
 @theme {
   --color-mist: #90AFC5;
