@@ -545,6 +545,9 @@ const PERSONAS = [
       }
 
       // ---- Construye la tabla de asignaciones a partir de las visitas ----
+      // ---- Construye la tabla de asignaciones a partir de las visitas ----
+      // Cada persona que visitó un territorio dentro del rango aparece en su propia fila.
+      // Columnas: Territorio | Última vez predicado | Nombre | [Inicio | Fin] x N bloques
       function renderAsignaciones() {
         let inicio = mesInicioInput.value;
         let fin = mesFinInput.value;
@@ -556,83 +559,99 @@ const PERSONAS = [
         const desde = primerDiaMes(inicio);
         const hasta = ultimoDiaMes(fin);
 
+        const celdaVacia = '<span class="text-gray-300">&mdash;</span>';
+
         const filasHtml = TERRITORIOS.map((t) => {
           const todasLetras = new Set(t.letras);
 
-          // Última visita ANTES del mes de inicio del rango
+          // Última visita ANTES del mes de inicio del rango (cualquier persona)
           const anteriores = visitas
             .filter((v) => v.territorio_id === t.numero && v.fecha < desde)
             .map((v) => v.fecha)
             .sort();
           const ultimaPredicacion = anteriores.length ? formatearFecha(anteriores[anteriores.length - 1]) : '';
 
-          // Visitas dentro del rango seleccionado
-          const enRango = visitas.filter((v) => v.territorio_id === t.numero && v.fecha >= desde && v.fecha <= hasta)
+          // Visitas dentro del rango
+          const enRango = visitas
+            .filter((v) => v.territorio_id === t.numero && v.fecha >= desde && v.fecha <= hasta)
             .sort((x, y) => x.fecha.localeCompare(y.fecha));
 
-          // Un bloque por mes; acumula letras del territorio para detectar cuándo se completó
-          let acumuladas = new Set();
-          let cicloCompleto = false;
+          // Personas únicas (orden de aparición)
+          const personas = [...new Set(enRango.map((v) => v.persona))];
+          const totalFilas = personas.length || 1;
 
-          const bloques = [];
-          for (let i = 0; i < nBloques; i++) {
-            const mes = meses[i];
-            if (!mes) { bloques.push(null); continue; }
+          const filasPersona = personas.map((persona, pIdx) => {
+            // Acumula letras de ESTA persona (sin mezclar entre personas)
+            const acumuladasPersona = new Set();
+            let cicloCompleto = false;
 
-            const iniMes = primerDiaMes(mes);
-            const finMes = ultimoDiaMes(mes);
-            const visitasMes = enRango.filter((v) => v.fecha >= iniMes && v.fecha <= finMes);
+            const celdas = meses.slice(0, nBloques).map((mes) => {
+              const iniMes = primerDiaMes(mes);
+              const finMes = ultimoDiaMes(mes);
+              const vm = enRango
+                .filter((v) => v.persona === persona && v.fecha >= iniMes && v.fecha <= finMes)
+                .sort((x, y) => x.fecha.localeCompare(y.fecha));
 
-            if (visitasMes.length === 0) { bloques.push({ persona: '', inicio: '', fin: '' }); continue; }
+              if (vm.length === 0) return `<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center">${celdaVacia}</td>`;
 
-            const personas = [...new Set(visitasMes.map((v) => v.persona))].join(' / ');
-            const inicioFecha = formatearFecha(visitasMes[0].fecha);
+              vm.forEach((v) => expandirCuadras(v.cuadras).forEach((l) => acumuladasPersona.add(l)));
 
-            visitasMes.forEach((v) => expandirCuadras(v.cuadras).forEach((l) => acumuladas.add(l)));
-
-            let finFecha = '';
-            if (!cicloCompleto) {
-              let cubre = true;
-              todasLetras.forEach((l) => { if (!acumuladas.has(l)) cubre = false; });
-              if (cubre) {
-                // Se completó: cubrieron todas las cuadras/letras del territorio
-                finFecha = formatearFecha(visitasMes[visitasMes.length - 1].fecha);
-                cicloCompleto = true;
+              let finFecha = '';
+              if (!cicloCompleto) {
+                let cubre = true;
+                todasLetras.forEach((l) => { if (!acumuladasPersona.has(l)) cubre = false; });
+                if (cubre) {
+                  finFecha = formatearFecha(vm[vm.length - 1].fecha);
+                  cicloCompleto = true;
+                }
               }
-            }
 
-            bloques.push({ persona: personas, inicio: inicioFecha, fin: finFecha });
+              return `
+                <td class="border-b border-gray-300 px-2 py-1 text-xs text-center">${formatearFecha(vm[0].fecha)}</td>
+                <td class="border-b border-gray-300 px-2 py-1 text-xs text-center">${finFecha || celdaVacia}</td>`;
+            }).join('');
+
+            const terrCell = pIdx === 0
+              ? `<td rowspan="${totalFilas}" class="border-b border-gray-300 px-2 py-1 font-semibold text-center bg-gradient-to-r from-[#d7e5f0] to-[#b9d4e6]">${t.numero}</td>`
+              : '';
+            const lastCell = pIdx === 0
+              ? `<td rowspan="${totalFilas}" class="border-b border-gray-300 px-2 py-1 text-xs text-center bg-[#fafcfd]">${ultimaPredicacion || celdaVacia}</td>`
+              : '';
+
+            return `
+              <tr>
+                ${terrCell}${lastCell}
+                <td class="border-b border-gray-300 px-2 py-1 font-medium text-sm whitespace-nowrap">${persona}</td>
+                ${celdas}
+              </tr>`;
+          }).join('');
+
+          // Sin visitas en el rango:1 fila con guiones
+          if (personas.length === 0) {
+            const celdasVacias = '<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center">' + celdaVacia + '</td>';
+            return `
+              <tr>
+                <td rowspan="1" class="border-b border-gray-300 px-2 py-1 font-semibold text-center bg-gradient-to-r from-[#d7e5f0] to-[#b9d4e6]">${t.numero}</td>
+                <td rowspan="1" class="border-b border-gray-300 px-2 py-1 text-xs text-center bg-[#fafcfd]">${ultimaPredicacion || celdaVacia}</td>
+                <td class="border-b border-gray-300 px-2 py-1 text-sm text-center text-gray-400">Sin visitas</td>
+                ${Array(nBloques).fill(celdasVacias).join('')}
+              </tr>`;
           }
 
-          const celdaVacia = '<span class="text-gray-300">—</span>';
-          const filaNombres = bloques.map((b) =>
-            `<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center font-medium">${b && b.persona ? b.persona : celdaVacia}</td>`
-          ).join('');
-          const filaFechas = bloques.map((b) =>
-            `<td class="border-b border-gray-300 px-2 py-1 text-xs text-center">${b && b.inicio ? b.inicio : celdaVacia}</td>` +
-            `<td class="border-b border-gray-300 px-2 py-1 text-xs text-center">${b && b.fin ? b.fin : celdaVacia}</td>`
-          ).join('');
-
-          return `
-            <tr>
-              <td rowspan="2" class="border-b border-gray-300 px-2 py-1 font-semibold text-center bg-gradient-to-r from-[#d7e5f0] to-[#b9d4e6]">${t.numero}</td>
-              <td rowspan="2" class="border-b border-gray-300 px-2 py-1 text-xs text-center bg-[#fafcfd]">${ultimaPredicacion || celdaVacia}</td>
-              ${filaNombres}
-            </tr>
-            <tr>${filaFechas}</tr>`;
+          return filasPersona;
         }).join('');
 
         const encabezadoBloques = [];
-        const encabezadoFechas = [];
+        const encabezadoSub = [];
         for (let i = 0; i < nBloques; i++) {
           const mes = meses[i];
           encabezadoBloques.push(`
             <th colspan="2" class="px-2 py-1 bg-stone text-white border-l border-white/30">
               Asignado a${mes ? ` <span class="block text-[10px] font-normal opacity-80">${nombreMes(mes)}</span>` : ''}
             </th>`);
-          encabezadoFechas.push(`
-            <th class="px-2 py-1.5 bg-stone text-white text-[11px] font-normal border-l border-white/30">Fecha de inicio</th>
-            <th class="px-2 py-1.5 bg-stone text-white text-[11px] font-normal">Fecha de término</th>`);
+          encabezadoSub.push(`
+            <th class="px-2 py-1 bg-stone text-white text-[11px] font-normal border-l border-white/30">Inicio</th>
+            <th class="px-2 py-1 bg-stone text-white text-[11px] font-normal">Fin</th>`);
         }
 
         tablaAsignaciones.innerHTML = `
@@ -641,13 +660,15 @@ const PERSONAS = [
               <tr>
                 <th rowspan="2" class="px-2 py-2 bg-stone text-white min-w-[90px]">Territorio</th>
                 <th rowspan="2" class="px-2 py-2 bg-stone text-white text-xs font-medium min-w-[110px]">Última vez predicado</th>
+                <th rowspan="2" class="px-2 py-2 bg-stone text-white min-w-[150px]">Nombre</th>
                 ${encabezadoBloques.join('')}
               </tr>
-              <tr>${encabezadoFechas.join('')}</tr>
+              <tr>${encabezadoSub.join('')}</tr>
             </thead>
             <tbody>${filasHtml}</tbody>
           </table>`;
       }
+
 
 
       // ---- Carga las visitas desde el servidor y actualiza la interfaz ----
