@@ -550,6 +550,8 @@ const PERSONAS = [
       // Columnas: Territorio | Última vez predicado | Nombre | [Inicio | Fin] x N bloques
       // ---- Construye la tabla de asignaciones a partir de las visitas ----
       // Cada bloque "Asignado a" = 1 mes (mínimo 4). Fila1 = nombre, Fila2 = fechas.
+      // ---- Construye la tabla de asignaciones a partir de las visitas ----
+      // Una fila por persona-territorio (2 tr: nombre + fechas). Bloques = meses (mínimo 4).
       function renderAsignaciones() {
         let inicio = mesInicioInput.value;
         let fin = mesFinInput.value;
@@ -562,17 +564,14 @@ const PERSONAS = [
         const hasta = ultimoDiaMes(fin);
 
         const celdaVacia = '<span class="text-gray-300">&mdash;</span>';
-        const mesesCorto = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-        function mesCorto(iso) { return mesesCorto[Number(iso.split('-')[1]) - 1] + ' \'' + iso.split('-')[0].slice(2); }
 
         const filasHtml = TERRITORIOS.map((t) => {
           const todasLetras = new Set(t.letras);
 
-          // Última fecha de completado (última visita que completó todas las letras, cualquier persona)
+          // Última fecha de completado
           const todasVisitasTerr = visitas
             .filter((v) => v.territorio_id === t.numero)
             .sort((x, y) => x.fecha.localeCompare(y.fecha));
-
           let ultimaFechaCompletado = '';
           const acumGlobal = new Set();
           todasVisitasTerr.forEach((v) => {
@@ -589,72 +588,68 @@ const PERSONAS = [
             .filter((v) => v.territorio_id === t.numero && v.fecha >= desde && v.fecha <= hasta)
             .sort((x, y) => x.fecha.localeCompare(y.fecha));
 
-          // Acumulación por persona (para detectar completado individual)
-          const personaAcum = {};
-          function getAcum(persona) {
-            if (!personaAcum[persona]) personaAcum[persona] = new Set();
-            return personaAcum[persona];
+          const personas = [...new Set(enRango.map((v) => v.persona))];
+          const totalFilas = personas.length || 1;
+
+          if (personas.length === 0) {
+            const vacias = '<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center">' + celdaVacia + '</td>';
+            return `
+              <tr>
+                <td rowspan="2" class="border-b border-gray-300 px-2 py-1 font-semibold text-center bg-gradient-to-r from-[#d7e5f0] to-[#b9d4e6]">${t.numero}</td>
+                <td rowspan="2" class="border-b border-gray-300 px-2 py-1 text-xs text-center bg-[#fafcfd]">${ultimaFechaCompletado ? formatearFecha(ultimaFechaCompletado) : celdaVacia}</td>
+                <td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center text-gray-400">Sin visitas</td>
+                ${Array(nBloques - 1).fill(vacias).join('')}
+              </tr>
+              <tr>${Array(nBloques).fill('<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center">' + celdaVacia + '</td>').join('')}</tr>`;
           }
 
-          // Un bloque por cada mes del rango (mínimo 4)
-          const bloques = [];
-          for (let i = 0; i < nBloques; i++) {
-            const mes = meses[i];
-            if (!mes) { bloques.push(null); continue; }
+          return personas.map((persona, pIdx) => {
+            const acumPersona = new Set();
 
-            const iniMes = primerDiaMes(mes);
-            const finMes = ultimoDiaMes(mes);
-            const vm = enRango.filter((v) => v.fecha >= iniMes && v.fecha <= finMes);
+            const celdasNombre = meses.slice(0, nBloques).map((mes) => {
+              const iniMes = primerDiaMes(mes);
+              const finMes = ultimoDiaMes(mes);
+              const vm = enRango.filter((v) => v.persona === persona && v.fecha >= iniMes && v.fecha <= finMes);
+              return `<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center font-medium text-sm">${vm.length ? persona : celdaVacia}</td>`;
+            }).join('');
 
-            if (!vm.length) { bloques.push(null); continue; }
+            const celdasFechas = meses.slice(0, nBloques).map((mes) => {
+              const iniMes = primerDiaMes(mes);
+              const finMes = ultimoDiaMes(mes);
+              const vm = enRango
+                .filter((v) => v.persona === persona && v.fecha >= iniMes && v.fecha <= finMes)
+                .sort((x, y) => x.fecha.localeCompare(y.fecha));
 
-            // Persona principal: primera que visitó en este mes
-            const ordenados = vm.sort((x, y) => x.fecha.localeCompare(y.fecha));
-            const persona = ordenados[0].persona;
-            const inicioFecha = formatearFecha(ordenados[0].fecha);
+              if (!vm.length) {
+                return '<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center">' + celdaVacia + '</td>';
+              }
 
-            // Acumula letras de ESTA persona (solo sus visitas)
-            vm.filter((v) => v.persona === persona)
-              .forEach((v) => expandirCuadras(v.cuadras).forEach((l) => getAcum(persona).add(l)));
+              vm.forEach((v) => expandirCuadras(v.cuadras).forEach((l) => acumPersona.add(l)));
+              let finFecha = '';
+              let cubre = true;
+              todasLetras.forEach((l) => { if (!acumPersona.has(l)) cubre = false; });
+              if (cubre) finFecha = formatearFecha(vm[vm.length - 1].fecha);
 
-            let finFecha = '';
-            let cubre = true;
-            todasLetras.forEach((l) => { if (!getAcum(persona).has(l)) cubre = false; });
-            if (cubre) {
-              const ultimaVisita = enRango
-                .filter((v) => v.persona === persona && v.fecha <= finMes)
-                .sort((x, y) => y.fecha.localeCompare(x.fecha))[0];
-              finFecha = formatearFecha(ultimaVisita.fecha);
-            }
+              return `
+                <td class="border-b border-gray-300 px-2 py-1 text-xs text-center whitespace-nowrap">${formatearFecha(vm[0].fecha)}</td>
+                <td class="border-b border-gray-300 px-2 py-1 text-xs text-center whitespace-nowrap">${finFecha || celdaVacia}</td>`;
+            }).join('');
 
-            bloques.push({ persona, inicio: inicioFecha, fin: finFecha });
-          }
+            const terrCell = pIdx === 0
+              ? `<td rowspan="${totalFilas * 2}" class="border-b border-gray-300 px-2 py-1 font-semibold text-center bg-gradient-to-r from-[#d7e5f0] to-[#b9d4e6]">${t.numero}</td>`
+              : '';
+            const lastCell = pIdx === 0
+              ? `<td rowspan="${totalFilas * 2}" class="border-b border-gray-300 px-2 py-1 text-xs text-center bg-[#fafcfd]">${ultimaFechaCompletado ? formatearFecha(ultimaFechaCompletado) : celdaVacia}</td>`
+              : '';
 
-          // Fila 1: nombres (colspan 2 cada bloque)
-          const row1 = bloques.map((b) =>
-            `<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center font-medium text-sm">${b ? b.persona : celdaVacia}</td>`
-          ).join('');
-
-          // Fila 2: fechas (2 celdas cada bloque)
-          const row2 = bloques.map((b) =>
-            `<td class="border-b border-gray-300 px-2 py-1 text-xs text-center whitespace-nowrap">${b ? b.inicio : celdaVacia}</td>` +
-            `<td class="border-b border-gray-300 px-2 py-1 text-xs text-center whitespace-nowrap">${b ? b.fin : celdaVacia}</td>`
-          ).join('');
-
-          return `
-            <tr>
-              <td rowspan="2" class="border-b border-gray-300 px-2 py-1 font-semibold text-center bg-gradient-to-r from-[#d7e5f0] to-[#b9d4e6]">${t.numero}</td>
-              <td rowspan="2" class="border-b border-gray-300 px-2 py-1 text-xs text-center bg-[#fafcfd]">${ultimaFechaCompletado ? formatearFecha(ultimaFechaCompletado) : celdaVacia}</td>
-              ${row1}
-            </tr>
-            <tr>${row2}</tr>`;
+            return `<tr>${terrCell}${lastCell}${celdasNombre}</tr><tr>${celdasFechas}</tr>`;
+          }).join('');
         }).join('');
 
         // Encabezados
         const enc1 = [];
         const enc2 = [];
         for (let i = 0; i < nBloques; i++) {
-          const mes = meses[i];
           enc1.push(`<th colspan="2" class="px-2 py-1 bg-stone text-white border-l border-white/30">Asignado a</th>`);
           enc2.push(
             `<th class="px-2 py-1 bg-stone text-white text-[11px] font-normal border-l border-white/30">Fecha que se asignó</th>` +
