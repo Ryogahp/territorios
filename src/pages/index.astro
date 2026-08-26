@@ -126,49 +126,25 @@ const PERSONAS = [
 
       <section id="contentAsignaciones" class="hidden w-screen relative left-1/2 -translate-x-1/2 px-4 pb-8">
         <div class="bg-mist p-4 rounded-lg">
-          <h2 class="text-lg font-semibold mb-2 text-charcoal border-b-2 border-stone pb-2">
+          <h2 class="text-lg font-semibold mb-3 text-charcoal border-b-2 border-stone pb-2">
             Plan de asignación de territorios
           </h2>
-          <p id="asignacionesError" class="font-medium mb-3 text-sm text-autumn hidden"></p>
-          <p class="text-sm mb-3 text-charcoal/80">Haz clic en cualquier espacio para asignar una persona o editar las fechas.</p>
+          <div class="flex flex-wrap items-end gap-3 mb-4">
+            <label class="flex flex-col gap-1 text-sm font-medium">
+              Mes de inicio
+              <input type="month" id="mesInicio"
+                class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm font-medium">
+              Mes de fin
+              <input type="month" id="mesFin"
+                class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1" />
+            </label>
+            <p class="text-xs text-charcoal/70 max-w-md">La tabla muestra las visitas de los meses seleccionados (mínimo 4 columnas). "Última vez predicado" muestra la última visita anterior al mes de inicio.</p>
+          </div>
           <div id="tablaAsignaciones" class="overflow-x-auto"></div>
         </div>
       </section>
-    </div>
-
-    <div id="modalAsignacion" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl">
-        <h3 id="modalTitulo" class="text-lg font-semibold mb-4 text-charcoal"></h3>
-        <form id="asignacionForm" class="flex flex-col gap-3">
-          <label class="flex flex-col gap-1 font-medium text-sm">
-            Asignado a
-            <input type="text" id="asigPersona" required list="listaPersonas"
-              placeholder="Escribe o elige una persona"
-              class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1" />
-          </label>
-          <label class="flex flex-col gap-1 font-medium text-sm">
-            Fecha en que se asignó
-            <input type="date" id="asigFechaAsignacion" required
-              class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1" />
-          </label>
-          <label class="flex flex-col gap-1 font-medium text-sm">
-            Fecha en que se completó
-            <input type="date" id="asigFechaCompletado"
-              class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1" />
-          </label>
-          <div class="flex gap-2 justify-end mt-2 flex-wrap">
-            <button type="button" id="asigEliminarBtn" class="hidden bg-transparent text-autumn border border-autumn px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-autumn/10">
-              Eliminar
-            </button>
-            <button type="button" id="asigCancelarBtn" class="bg-transparent text-charcoal border border-gray-400 px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-gray-100">
-              Cancelar
-            </button>
-            <button type="submit" class="bg-stone text-white px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-[#2a5a74] border-none">
-              Guardar
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
 
     <div id="territoriosData" data-territorios={JSON.stringify(TERRITORIOS)} hidden></div>
@@ -540,169 +516,139 @@ const PERSONAS = [
         }
       }
 
-      // ---- Asignaciones: referencias y estado ----
+      // ---- Asignaciones: referencias ----
       const tablaAsignaciones = document.getElementById('tablaAsignaciones');
-      const asignacionesError = document.getElementById('asignacionesError');
-      const modalAsignacion = document.getElementById('modalAsignacion');
-      const modalTitulo = document.getElementById('modalTitulo');
-      const asignacionForm = document.getElementById('asignacionForm');
-      const asigPersona = document.getElementById('asigPersona');
-      const asigFechaAsignacion = document.getElementById('asigFechaAsignacion');
-      const asigFechaCompletado = document.getElementById('asigFechaCompletado');
-      const asigEliminarBtn = document.getElementById('asigEliminarBtn');
-      const asigCancelarBtn = document.getElementById('asigCancelarBtn');
+      const mesInicioInput = document.getElementById('mesInicio');
+      const mesFinInput = document.getElementById('mesFin');
 
-      let asignaciones = [];
-      let asigActual = null;
-
-      // ---- Carga las asignaciones desde el servidor ----
-      async function cargarAsignaciones() {
-        try {
-          const res = await fetch('/api/asignaciones');
-          if (!res.ok) throw new Error('Error al cargar las asignaciones');
-          asignaciones = await res.json();
-          renderAsignaciones();
-        } catch (err) {
-          asignacionesError.textContent = err.message;
-          asignacionesError.classList.remove('hidden');
-        }
+      // ---- Utilidades de meses (formato YYYY-MM) ----
+      function pad2(n) { return String(n).padStart(2, '0'); }
+      function mesISO(fecha) { return fecha.getFullYear() + '-' + pad2(fecha.getMonth() + 1); }
+      function sumarMeses(iso, n) {
+        const [y, m] = iso.split('-').map(Number);
+        return mesISO(new Date(y, m - 1 + n, 1));
+      }
+      function listaMeses(inicio, fin) {
+        const meses = [];
+        let cur = inicio;
+        while (cur <= fin && meses.length < 24) { meses.push(cur); cur = sumarMeses(cur, 1); }
+        return meses;
+      }
+      function primerDiaMes(iso) { return iso + '-01'; }
+      function ultimoDiaMes(iso) {
+        const [y, m] = iso.split('-').map(Number);
+        return y + '-' + pad2(m) + '-' + pad2(new Date(y, m, 0).getDate());
+      }
+      function nombreMes(iso) {
+        const nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        return nombres[Number(iso.split('-')[1]) - 1] + ' ' + iso.split('-')[0];
       }
 
-      // ---- Construye la tabla de asignaciones con 4 bloques por territorio ----
+      // ---- Construye la tabla de asignaciones a partir de las visitas ----
       function renderAsignaciones() {
-        const filas = TERRITORIOS.map((t) => {
-          const fechas = visitas
-            .filter((v) => v.territorio_id === t.numero)
+        let inicio = mesInicioInput.value;
+        let fin = mesFinInput.value;
+        if (!inicio || !fin) return;
+        if (inicio > fin) { const tmp = inicio; inicio = fin; fin = tmp; }
+
+        const meses = listaMeses(inicio, fin);
+        const nBloques = Math.max(4, meses.length);
+        const desde = primerDiaMes(inicio);
+        const hasta = ultimoDiaMes(fin);
+
+        const filasHtml = TERRITORIOS.map((t) => {
+          const todasLetras = new Set(t.letras);
+
+          // Última visita ANTES del mes de inicio del rango
+          const anteriores = visitas
+            .filter((v) => v.territorio_id === t.numero && v.fecha < desde)
             .map((v) => v.fecha)
             .sort();
-          const ultimaPredicacion = fechas.length ? formatearFecha(fechas[fechas.length - 1]) : '';
+          const ultimaPredicacion = anteriores.length ? formatearFecha(anteriores[anteriores.length - 1]) : '';
 
-          const asigs = asignaciones
-            .filter((a) => a.territorio_id === t.numero)
-            .sort((x, y) => String(x.fecha_asignacion).localeCompare(String(y.fecha_asignacion)))
-            .slice(0, 4);
+          // Visitas dentro del rango seleccionado
+          const enRango = visitas.filter((v) => v.territorio_id === t.numero && v.fecha >= desde && v.fecha <= hasta)
+            .sort((x, y) => x.fecha.localeCompare(y.fecha));
 
-          let bloques = '';
-          for (let i = 0; i < 4; i++) {
-            const a = asigs[i];
-            const bg = i % 2 === 0 ? 'bg-[#f4f8fb]' : 'bg-[#fbfaf5]';
-            bloques += `
-              <td colspan="2" data-asig data-terr="${t.numero}" data-id="${a ? a.id : ''}"
-                class="cursor-pointer border-b border-gray-300 px-2 py-1 ${bg} hover:bg-[#e3edf4] transition-colors text-center font-medium">
-                ${a ? a.persona : '<span class="text-gray-300">+</span>'}
-              </td>
-              <td data-asig data-terr="${t.numero}" data-id="${a ? a.id : ''}"
-                class="cursor-pointer border-b border-gray-300 px-2 py-1 ${bg} hover:bg-[#e3edf4] transition-colors text-xs text-center">
-                ${a ? formatearFecha(a.fecha_asignacion) : '<span class="text-gray-300">—</span>'}
-              </td>
-              <td data-asig data-terr="${t.numero}" data-id="${a ? a.id : ''}"
-                class="cursor-pointer border-b border-gray-300 px-2 py-1 ${bg} hover:bg-[#e3edf4] transition-colors text-xs text-center">
-                ${a && a.fecha_completado ? formatearFecha(a.fecha_completado) : '<span class="text-gray-300">—</span>'}
-              </td>`;
+          // Un bloque por mes; acumula letras del territorio para detectar cuándo se completó
+          let acumuladas = new Set();
+          let cicloCompleto = false;
+
+          const bloques = [];
+          for (let i = 0; i < nBloques; i++) {
+            const mes = meses[i];
+            if (!mes) { bloques.push(null); continue; }
+
+            const iniMes = primerDiaMes(mes);
+            const finMes = ultimoDiaMes(mes);
+            const visitasMes = enRango.filter((v) => v.fecha >= iniMes && v.fecha <= finMes);
+
+            if (visitasMes.length === 0) { bloques.push({ persona: '', inicio: '', fin: '' }); continue; }
+
+            const personas = [...new Set(visitasMes.map((v) => v.persona))].join(' / ');
+            const inicioFecha = formatearFecha(visitasMes[0].fecha);
+
+            visitasMes.forEach((v) => expandirCuadras(v.cuadras).forEach((l) => acumuladas.add(l)));
+
+            let finFecha = '';
+            if (!cicloCompleto) {
+              let cubre = true;
+              todasLetras.forEach((l) => { if (!acumuladas.has(l)) cubre = false; });
+              if (cubre) {
+                // Se completó: cubrieron todas las cuadras/letras del territorio
+                finFecha = formatearFecha(visitasMes[visitasMes.length - 1].fecha);
+                cicloCompleto = true;
+              }
+            }
+
+            bloques.push({ persona: personas, inicio: inicioFecha, fin: finFecha });
           }
+
+          const celdaVacia = '<span class="text-gray-300">—</span>';
+          const filaNombres = bloques.map((b) =>
+            `<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center font-medium">${b && b.persona ? b.persona : celdaVacia}</td>`
+          ).join('');
+          const filaFechas = bloques.map((b) =>
+            `<td class="border-b border-gray-300 px-2 py-1 text-xs text-center">${b && b.inicio ? b.inicio : celdaVacia}</td>` +
+            `<td class="border-b border-gray-300 px-2 py-1 text-xs text-center">${b && b.fin ? b.fin : celdaVacia}</td>`
+          ).join('');
 
           return `
             <tr>
-              <td class="border-b border-gray-300 px-2 py-1 font-semibold text-center bg-gradient-to-r from-[#d7e5f0] to-[#b9d4e6]">${t.numero}</td>
-              <td class="border-b border-gray-300 px-2 py-1 text-xs text-center bg-[#fafcfd]">${ultimaPredicacion || '<span class="text-gray-300">—</span>'}</td>
-              ${bloques}
-            </tr>`;
+              <td rowspan="2" class="border-b border-gray-300 px-2 py-1 font-semibold text-center bg-gradient-to-r from-[#d7e5f0] to-[#b9d4e6]">${t.numero}</td>
+              <td rowspan="2" class="border-b border-gray-300 px-2 py-1 text-xs text-center bg-[#fafcfd]">${ultimaPredicacion || celdaVacia}</td>
+              ${filaNombres}
+            </tr>
+            <tr>${filaFechas}</tr>`;
         }).join('');
+
+        const encabezadoBloques = [];
+        const encabezadoFechas = [];
+        for (let i = 0; i < nBloques; i++) {
+          const mes = meses[i];
+          encabezadoBloques.push(`
+            <th colspan="2" class="px-2 py-1 bg-stone text-white border-l border-white/30">
+              Asignado a${mes ? ` <span class="block text-[10px] font-normal opacity-80">${nombreMes(mes)}</span>` : ''}
+            </th>`);
+          encabezadoFechas.push(`
+            <th class="px-2 py-1.5 bg-stone text-white text-[11px] font-normal border-l border-white/30">Fecha de inicio</th>
+            <th class="px-2 py-1.5 bg-stone text-white text-[11px] font-normal">Fecha de término</th>`);
+        }
 
         tablaAsignaciones.innerHTML = `
           <table class="w-full border-collapse text-sm">
             <thead>
               <tr>
-                <th rowspan="2" class="px-2 py-2 bg-stone text-white sticky top-0 z-10">Territorio</th>
-                <th rowspan="2" class="px-2 py-2 bg-stone text-white text-xs font-medium sticky top-0 z-10">Última vez predicado</th>
-                <th colspan="2" class="px-2 py-1.5 bg-stone text-white border-l border-white/30">Asignado a</th>
-                <th colspan="2" class="px-2 py-1.5 bg-stone text-white border-l border-white/30">Asignado a</th>
-                <th colspan="2" class="px-2 py-1.5 bg-stone text-white border-l border-white/30">Asignado a</th>
-                <th colspan="2" class="px-2 py-1.5 bg-stone text-white border-l border-white/30">Asignado a</th>
+                <th rowspan="2" class="px-2 py-2 bg-stone text-white min-w-[90px]">Territorio</th>
+                <th rowspan="2" class="px-2 py-2 bg-stone text-white text-xs font-medium min-w-[110px]">Última vez predicado</th>
+                ${encabezadoBloques.join('')}
               </tr>
-              <tr>
-                <th class="px-2 py-1.5 bg-stone text-white text-xs font-normal border-l border-white/30">Fecha en que se asignó</th>
-                <th class="px-2 py-1.5 bg-stone text-white text-xs font-normal">Fecha en que se completó</th>
-                <th class="px-2 py-1.5 bg-stone text-white text-xs font-normal border-l border-white/30">Fecha en que se asignó</th>
-                <th class="px-2 py-1.5 bg-stone text-white text-xs font-normal">Fecha en que se completó</th>
-                <th class="px-2 py-1.5 bg-stone text-white text-xs font-normal border-l border-white/30">Fecha en que se asignó</th>
-                <th class="px-2 py-1.5 bg-stone text-white text-xs font-normal">Fecha en que se completó</th>
-                <th class="px-2 py-1.5 bg-stone text-white text-xs font-normal border-l border-white/30">Fecha en que se asignó</th>
-                <th class="px-2 py-1.5 bg-stone text-white text-xs font-normal">Fecha en que se completó</th>
-              </tr>
+              <tr>${encabezadoFechas.join('')}</tr>
             </thead>
-            <tbody>${filas}</tbody>
+            <tbody>${filasHtml}</tbody>
           </table>`;
       }
 
-      // ---- Abre el modal para crear o editar una asignación ----
-      function abrirModalAsignacion(territorioId, asig) {
-        asigActual = { id: asig ? asig.id : null, territorio_id: territorioId };
-        modalTitulo.textContent = 'Territorio ' + territorioId + (asig ? ' — Editar asignación' : ' — Nueva asignación');
-        asigPersona.value = asig ? asig.persona : '';
-        asigFechaAsignacion.value = asig ? asig.fecha_asignacion : fechaInput.value;
-        asigFechaCompletado.value = asig && asig.fecha_completado ? asig.fecha_completado : '';
-        asigEliminarBtn.classList.toggle('hidden', !asig);
-        modalAsignacion.classList.remove('hidden');
-        asigPersona.focus();
-      }
-
-      // ---- Cierra el modal de asignación ----
-      function cerrarModalAsignacion() {
-        modalAsignacion.classList.add('hidden');
-        asigActual = null;
-        asignacionForm.reset();
-      }
-
-      // ---- Guarda (crea o actualiza) una asignación ----
-      async function guardarAsignacion(e) {
-        e.preventDefault();
-        if (!asigActual) return;
-        const payload = {
-          persona: asigPersona.value.trim(),
-          fecha_asignacion: asigFechaAsignacion.value,
-          fecha_completado: asigFechaCompletado.value || null,
-        };
-        if (!payload.persona || !payload.fecha_asignacion) return;
-        try {
-          const res = asigActual.id
-            ? await fetch('/api/asignaciones', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: asigActual.id, ...payload }),
-              })
-            : await fetch('/api/asignaciones', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ territorio_id: asigActual.territorio_id, ...payload }),
-              });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Error al guardar la asignación');
-          cerrarModalAsignacion();
-          await cargarAsignaciones();
-        } catch (err) {
-          alert(err.message);
-        }
-      }
-
-      // ---- Elimina una asignación tras confirmar ----
-      async function eliminarAsignacion() {
-        if (!asigActual || !asigActual.id) return;
-        if (!confirm('¿Eliminar esta asignación?')) return;
-        try {
-          const res = await fetch('/api/asignaciones', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: asigActual.id }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Error al eliminar la asignación');
-          cerrarModalAsignacion();
-          await cargarAsignaciones();
-        } catch (err) {
-          alert(err.message);
-        }
-      }
 
       // ---- Carga las visitas desde el servidor y actualiza la interfaz ----
       async function cargarVisitas() {
@@ -882,23 +828,9 @@ const PERSONAS = [
         if (delBtn) eliminarVisita(delBtn.dataset.id);
       });
 
-      // Asignaciones: clic en una celda abre el modal; eventos del formulario
-      tablaAsignaciones.addEventListener('click', (e) => {
-        const celda = e.target.closest('td[data-asig]');
-        if (!celda) return;
-        const id = celda.dataset.id ? Number(celda.dataset.id) : null;
-        const asig = id ? asignaciones.find((a) => a.id === id) : null;
-        abrirModalAsignacion(Number(celda.dataset.terr), asig);
-      });
-      asignacionForm.addEventListener('submit', guardarAsignacion);
-      asigCancelarBtn.addEventListener('click', cerrarModalAsignacion);
-      asigEliminarBtn.addEventListener('click', eliminarAsignacion);
-      modalAsignacion.addEventListener('click', (e) => {
-        if (e.target === modalAsignacion) cerrarModalAsignacion();
-      });
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modalAsignacion.classList.contains('hidden')) cerrarModalAsignacion();
-      });
+      // Asignaciones: al cambiar los meses se reconstruye la tabla
+      mesInicioInput.addEventListener('change', renderAsignaciones);
+      mesFinInput.addEventListener('change', renderAsignaciones);
 
       addTerritorioBtn.addEventListener('click', () => {
         if (filasTerritorio >= 3) return;
@@ -910,8 +842,9 @@ const PERSONAS = [
       });
 
       form.addEventListener('submit', enviarVisita);
+      mesFinInput.value = mesISO(new Date());
+      mesInicioInput.value = sumarMeses(mesFinInput.value, -3);
       cargarVisitas();
-      cargarAsignaciones();
     </script>
   </body>
 </html>
