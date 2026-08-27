@@ -41,7 +41,7 @@ const PERSONAS = [
             Lista de territorios por visitar
           </button>
           <button class="tab bg-transparent text-white/70 hover:bg-white/10 hover:text-white border-none px-4 py-2 text-sm font-medium cursor-pointer rounded-t-lg transition-colors" data-tab="asignaciones">
-            Asignaciones
+            S-13_S
           </button>
         </nav>
       </header>
@@ -577,20 +577,22 @@ const PERSONAS = [
         const filasHtml = TERRITORIOS.map((t) => {
           const todasLetras = new Set(t.letras);
 
-          // Última fecha de completado (cualquier persona, cualquier tiempo)
-          const todasVisitasTerr = visitas
-            .filter((v) => v.territorio_id === t.numero)
+          // Última vez que se completó ANTES del mes de inicio seleccionado.
+          // Se recorren las visitas anteriores al mes de inicio en orden cronológico;
+          // la última fecha en la que las cuadras acumuladas cubren todo el territorio.
+          const todasLetrasT = [...todasLetras];
+          const visitasPrevias = visitas
+            .filter((v) => v.territorio_id === t.numero && v.fecha < desde)
             .sort((x, y) => x.fecha.localeCompare(y.fecha));
           let ultimaFechaCompletado = '';
-          const acumGlobal = new Set();
-          todasVisitasTerr.forEach((v) => {
-            expandirCuadras(v.cuadras).forEach((l) => acumGlobal.add(l));
-            if (!ultimaFechaCompletado) {
-              let cubre = true;
-              todasLetras.forEach((l) => { if (!acumGlobal.has(l)) cubre = false; });
+          {
+            const acum = new Set();
+            visitasPrevias.forEach((v) => {
+              expandirCuadras(v.cuadras).forEach((l) => acum.add(l));
+              const cubre = todasLetrasT.every((l) => acum.has(l));
               if (cubre) ultimaFechaCompletado = v.fecha;
-            }
-          });
+            });
+          }
 
           // Visitas de este territorio dentro del rango
           const enRango = visitas
