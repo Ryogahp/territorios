@@ -71,4 +71,5 @@ export const TERRITORIOS: Territorio[] = [
   { numero: 56, letras: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q'] },
   { numero: 57, letras: ['A','B','C','D','E','F','G','H','I','J'] },
   { numero: 58, letras: ['A','B','C','D','E','F','G','H','I','J','K'] },
+  { numero: 59, letras: ['A','B','C','D','E','F','G','H','I','J','K','L','M'] },
 ];
