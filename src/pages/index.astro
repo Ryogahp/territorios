@@ -47,7 +47,7 @@ const PERSONAS = [
       </header>
 
       <main class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
-        <aside class="bg-mist p-6 rounded-lg h-fit">
+        <aside id="asideForm" class="bg-mist p-6 rounded-lg h-fit">
           <h2 class="text-lg font-semibold mb-4 text-charcoal border-b-2 border-stone pb-2">
             Registrar visita
           </h2>
@@ -77,6 +77,26 @@ const PERSONAS = [
                   <option value={p}></option>
                 ))}
               </datalist>
+            </label>
+
+            <label class="flex flex-col gap-1 font-medium text-sm">
+              Turno
+              <select id="turno" required class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1">
+                <option value="">Elige el turno</option>
+                <option value="Mañana">Mañana</option>
+                <option value="Tarde">Tarde</option>
+              </select>
+            </label>
+
+            <label class="flex flex-col gap-1 font-medium text-sm">
+              Cantidad de personas que salieron
+              <input
+                type="number"
+                id="cantidadPersonas"
+                min="1"
+                placeholder="Ej. 2"
+                class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1"
+              />
             </label>
 
             <label class="flex flex-col gap-1 font-medium text-sm">
@@ -154,6 +174,8 @@ const PERSONAS = [
       const form = document.getElementById('visitaForm');
       const fechaInput = document.getElementById('fecha');
       const personaInput = document.getElementById('persona');
+      const turnoInput = document.getElementById('turno');
+      const cantidadInput = document.getElementById('cantidadPersonas');
       const territorioSelect = document.getElementById('territorio');
       const cuadrasCheckboxes = document.getElementById('cuadrasCheckboxes');
       const addTerritorioBtn = document.getElementById('addTerritorioBtn');
@@ -176,6 +198,7 @@ const PERSONAS = [
       // ---- Pestañas: muestra el contenido de la pestaña activa ----
       const tabs = document.querySelectorAll('.tab');
       const mainEl = document.querySelector('main');
+      const asideForm = document.getElementById('asideForm');
       const contentAsignaciones = document.getElementById('contentAsignaciones');
       const tabContents = {
         registro: document.getElementById('contentRegistro'),
@@ -194,6 +217,8 @@ const PERSONAS = [
             contentAsignaciones.classList.add('hidden');
             Object.values(tabContents).forEach((c) => c.classList.add('hidden'));
             tabContents[btn.dataset.tab].classList.remove('hidden');
+            // El formulario de registro solo se muestra en la pestaña "Registro"
+            asideForm.classList.toggle('hidden', btn.dataset.tab !== 'registro');
           }
         });
       });
@@ -421,6 +446,8 @@ const PERSONAS = [
 
         const fecha = fechaInput.value;
         const persona = personaInput.value.trim();
+        const turno = turnoInput.value;
+        const cantidad_personas = cantidadInput.value ? parseInt(cantidadInput.value, 10) : null;
 
         if (!fecha) {
           setFormMessage('Debes indicar la fecha.', 'error');
@@ -430,18 +457,22 @@ const PERSONAS = [
           setFormMessage('Debes indicar la persona.', 'error');
           return;
         }
+        if (!turno) {
+          setFormMessage('Debes indicar el turno (Mañana o Tarde).', 'error');
+          return;
+        }
 
         try {
           const res = editandoId
             ? await fetch('/api/visitas', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: editandoId, fecha, persona, territorios }),
+                body: JSON.stringify({ id: editandoId, fecha, persona, turno, cantidad_personas, territorios }),
               })
             : await fetch('/api/visitas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fecha, persona, territorios }),
+                body: JSON.stringify({ fecha, persona, turno, cantidad_personas, territorios }),
               });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Error al guardar la visita');
@@ -464,6 +495,8 @@ const PERSONAS = [
         editandoId = Number(btn.dataset.id);
         fechaInput.value = btn.dataset.fecha;
         personaInput.value = btn.dataset.persona;
+        turnoInput.value = btn.dataset.turno || '';
+        cantidadInput.value = btn.dataset.cantidad || '';
         territorioSelect.value = btn.dataset.territorio;
 
         document.querySelectorAll('.territorio-row').forEach((row) => row.remove());
@@ -740,10 +773,14 @@ const PERSONAS = [
                   const btns = `
                     <button class="btn-edit text-[11px] text-stone underline cursor-pointer border-none bg-transparent p-0 ml-1 hover:text-[#2a5a74]"
                       data-id="${v.id}" data-fecha="${v.fecha}" data-persona="${v.persona.replace(/"/g, '&quot;')}" data-territorio="${v.territorio_id}"
+                      data-turno="${v.turno || ''}" data-cantidad="${v.cantidad_personas || ''}"
                       data-cuadras='${JSON.stringify(v.cuadras)}'>Editar</button>
                     <button class="btn-delete text-[11px] text-autumn underline cursor-pointer border-none bg-transparent p-0 ml-1"
                       data-id="${v.id}">Eliminar</button>`;
-                  return `${v.persona} (${formatearFecha(v.fecha)}) ${btns}`;
+                  const detalle = `${v.persona} (${formatearFecha(v.fecha)})` +
+                    (v.turno ? ` — ${v.turno}` : '') +
+                    (v.cantidad_personas ? ` · ${v.cantidad_personas} pers.` : '');
+                  return `${detalle} ${btns}`;
                 }).join('<br/>') || '<span class="text-gray-400 italic">Sin visitas</span>'}
               </td>
               <td class="px-2 py-1.5 border-b border-gray-300 ${idx % 2 === 0 ? 'bg-[#f4f8fb]' : 'bg-[#fbfaf5]'} hover:bg-[#e3edf4] transition-colors">
@@ -777,32 +814,55 @@ const PERSONAS = [
         statusMessage.classList.add('text-green-700');
       }
 
-      // ---- Renderiza las tarjetas de territorios pendientes ----
+      // ---- Renderiza las tarjetas de territorios pendientes, agrupadas en 5 grupos ----
+      const GRUPOS_TERRITORIOS = [
+        { nombre: 'Irpavi', desde: 1, hasta: 17 },
+        { nombre: 'Boloni y Caliri', desde: 18, hasta: 28 },
+        { nombre: 'Bella Vista', desde: 29, hasta: 45 },
+        { nombre: 'Irpavi 2', desde: 46, hasta: 49 },
+        { nombre: 'Alto Irpavi', desde: 50, hasta: 59 },
+      ];
+
+      function tarjetaTerritorio(t) {
+        const visitasTerr = visitas.filter((v) => v.territorio_id === t.numero);
+        const cuadrasVisitadas = new Set();
+        visitasTerr.forEach((v) => {
+          expandirCuadras(v.cuadras).forEach((c) => cuadrasVisitadas.add(c));
+        });
+        const faltantes = [];
+        t.letras.forEach((letra) => {
+          if (!cuadrasVisitadas.has(letra)) faltantes.push(letra);
+        });
+        const ultima = visitasTerr.map((v) => v.fecha).sort((a, b) => b.localeCompare(a))[0];
+
+        const pct = (cuadrasVisitadas.size / t.letras.length) * 100;
+        const borderClass = ultima ? 'border-l-stone' : 'border-l-autumn';
+        return `
+          <div class="territorio-card bg-white rounded-md px-4 py-3 border-l-4 ${borderClass}">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-semibold text-base">Territorio ${t.numero}</span>
+              <span class="text-xs text-gray-500">
+                ${ultima ? 'Última visita: ' + ultima + ' (' + calcularDias(ultima) + ' días)' : 'Nunca visitado'}
+              </span>
+            </div>
+            <div class="h-1.5 bg-gray-200 rounded overflow-hidden mb-1">
+              <div class="h-full bg-stone rounded" style="width: ${pct}%"></div>
+            </div>
+            <div class="text-sm">
+              <p class="my-0.5"><strong>${cuadrasVisitadas.size}/${t.letras.length}</strong> cuadras visitadas</p>
+              <p class="my-0.5 text-autumn font-medium">Faltantes: ${faltantes.join(', ')}</p>
+            </div>
+          </div>
+        `;
+      }
+
       function renderTerritorios() {
+        // Ordena: los que hace más tiempo que no se visitan al inicio, los recién visitados al final
         const lista = TERRITORIOS.map((t) => {
           const visitasTerr = visitas.filter((v) => v.territorio_id === t.numero);
-          const cuadrasVisitadas = new Set();
-          visitasTerr.forEach((v) => {
-            expandirCuadras(v.cuadras).forEach((c) => cuadrasVisitadas.add(c));
-          });
-          const faltantes = [];
-          t.letras.forEach((letra) => {
-            if (!cuadrasVisitadas.has(letra)) faltantes.push(letra);
-          });
-          const ultima = visitasTerr
-            .map((v) => v.fecha)
-            .sort((a, b) => b.localeCompare(a))[0];
-
-          return {
-            numero: t.numero,
-            total: t.letras.length,
-            visitadas: cuadrasVisitadas.size,
-            faltantes,
-            ultimaFecha: ultima || null,
-          };
+          const ultima = visitasTerr.map((v) => v.fecha).sort((a, b) => b.localeCompare(a))[0];
+          return { numero: t.numero, ultimaFecha: ultima || null };
         });
-
-        // Ordena: los que hace más tiempo que no se visitan al inicio, los recién visitados al final
         lista.sort((a, b) => {
           if (!a.ultimaFecha && !b.ultimaFecha) return a.numero - b.numero;
           if (!a.ultimaFecha) return -1;
@@ -810,29 +870,19 @@ const PERSONAS = [
           return a.ultimaFecha.localeCompare(b.ultimaFecha);
         });
 
-        territoriosList.innerHTML = lista
-          .map((t) => {
-            const pct = (t.visitadas / t.total) * 100;
-            const borderClass = t.ultimaFecha ? 'border-l-stone' : 'border-l-autumn';
-            return `
-              <div class="territorio-card bg-white rounded-md px-4 py-3 border-l-4 ${borderClass}">
-                <div class="flex justify-between items-center mb-1">
-                  <span class="font-semibold text-base">Territorio ${t.numero}</span>
-                  <span class="text-xs text-gray-500">
-                    ${t.ultimaFecha ? 'Última visita: ' + t.ultimaFecha + ' (' + calcularDias(t.ultimaFecha) + ' días)' : 'Nunca visitado'}
-                  </span>
-                </div>
-                <div class="h-1.5 bg-gray-200 rounded overflow-hidden mb-1">
-                  <div class="h-full bg-stone rounded" style="width: ${pct}%"></div>
-                </div>
-                <div class="text-sm">
-                  <p class="my-0.5"><strong>${t.visitadas}/${t.total}</strong> cuadras visitadas</p>
-                  <p class="my-0.5 text-autumn font-medium">Faltantes: ${t.faltantes.join(', ')}</p>
-                </div>
+        territoriosList.innerHTML = GRUPOS_TERRITORIOS.map((g) => {
+          const enGrupo = lista.filter((t) => t.numero >= g.desde && t.numero <= g.hasta);
+          return `
+            <div class="grupo-territorios">
+              <h3 class="grupo-titulo text-sm font-bold uppercase tracking-wide text-stone mb-1 mt-2">
+                Grupo ${GRUPOS_TERRITORIOS.indexOf(g) + 1} — ${g.nombre} (Territorios ${g.desde}–${g.hasta})
+              </h3>
+              <div class="flex flex-col gap-3">
+                ${enGrupo.map((t) => tarjetaTerritorio(TERRITORIOS.find((x) => x.numero === t.numero))).join('')}
               </div>
-            `;
-          })
-          .join('');
+            </div>
+          `;
+        }).join('');
       }
 
       // ---- Inicialización: eventos y carga de datos ----

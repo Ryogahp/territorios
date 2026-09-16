@@ -6,10 +6,16 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { fecha, persona, territorios } = body;
+    const { fecha, persona, turno, cantidad_personas, territorios } = body;
 
     if (!fecha || !persona || !territorios || !Array.isArray(territorios) || territorios.length === 0) {
       return new Response(JSON.stringify({ error: 'Faltan campos requeridos' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (turno !== undefined && !['Mañana', 'Tarde'].includes(turno)) {
+      return new Response(JSON.stringify({ error: 'Turno inválido' }), {
         status: 400, headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -31,6 +37,8 @@ export const POST: APIRoute = async ({ request }) => {
     const inserts = territorios.map(t => ({
       fecha,
       persona,
+      turno: turno || null,
+      cantidad_personas: cantidad_personas || null,
       territorio_id: t.territorio_id,
       cuadras: t.cuadras,
     }));
@@ -55,10 +63,16 @@ export const POST: APIRoute = async ({ request }) => {
 export const PUT: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { id, fecha, persona, territorios } = body;
+    const { id, fecha, persona, turno, cantidad_personas, territorios } = body;
 
     if (!id || !fecha || !persona || !territorios || !Array.isArray(territorios) || territorios.length === 0) {
       return new Response(JSON.stringify({ error: 'Faltan campos requeridos' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (turno !== undefined && !['Mañana', 'Tarde'].includes(turno)) {
+      return new Response(JSON.stringify({ error: 'Turno inválido' }), {
         status: 400, headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -78,7 +92,7 @@ export const PUT: APIRoute = async ({ request }) => {
 
     const { data, error } = await supabase
       .from('visitas')
-      .update({ fecha, persona, territorio_id: t.territorio_id, cuadras: t.cuadras })
+      .update({ fecha, persona, turno: turno || null, cantidad_personas: cantidad_personas || null, territorio_id: t.territorio_id, cuadras: t.cuadras })
       .eq('id', id)
       .select()
       .single();
