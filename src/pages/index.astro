@@ -46,94 +46,79 @@ const PERSONAS = [
         </nav>
       </header>
 
-      <main class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
-        <aside id="asideForm" class="bg-mist p-6 rounded-lg h-fit">
-          <h2 class="text-lg font-semibold mb-4 text-charcoal border-b-2 border-stone pb-2">
-            Registrar visita
-          </h2>
-          <form id="visitaForm" class="flex flex-col gap-3">
-            <label class="flex flex-col gap-1 font-medium text-sm">
-              Fecha
-              <input
-                type="date"
-                id="fecha"
-                required
-                class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1"
-              />
-            </label>
+            <main class="flex flex-col gap-6">
+        <section id="contentRegistro">
+          <div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
+            <aside id="asideForm" class="bg-mist p-6 rounded-lg h-fit">
+              <h2 class="text-lg font-semibold mb-4 text-charcoal border-b-2 border-stone pb-2">
+                Registrar visita
+              </h2>
+              <form id="visitaForm" class="flex flex-col gap-3">
+                <label class="flex flex-col gap-1 font-medium text-sm">
+                  Fecha
+                  <input type="date" id="fecha" required
+                    class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1" />
+                </label>
+                <label class="flex flex-col gap-1 font-medium text-sm">
+                  Persona
+                  <input type="text" id="persona" required list="listaPersonas" placeholder="Escribe o elige una persona"
+                    class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1" />
+                  <datalist id="listaPersonas">
+                    {PERSONAS.map((p) => (
+                      <option value={p}></option>
+                    ))}
+                  </datalist>
+                </label>
+                <label class="flex flex-col gap-1 font-medium text-sm">
+                  Turno
+                  <select id="turno" required class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1">
+                    <option value="">Elige el turno</option>
+                    <option value="Mañana">Mañana</option>
+                    <option value="Tarde">Tarde</option>
+                  </select>
+                </label>
+                <label class="flex flex-col gap-1 font-medium text-sm">
+                  Cantidad de personas que salieron
+                  <input type="number" id="cantidadPersonas" min="1" placeholder="Ej. 2"
+                    class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1" />
+                </label>
+                <label class="flex flex-col gap-1 font-medium text-sm">
+                  Territorio
+                  <select id="territorio" required class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1">
+                    <option value="">Selecciona un territorio</option>
+                    {TERRITORIOS.map((t) => (
+                      <option value={t.numero}>Territorio {t.numero} — {t.letras.length} cuadras</option>
+                    ))}
+                  </select>
+                </label>
+                <label class="flex flex-col gap-1 font-medium text-sm">
+                  Cuadras visitadas
+                  <div id="cuadrasCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 bg-white rounded p-2 border border-stone"></div>
+                </label>
+                <button type="submit" id="submitBtn"
+                  class="bg-stone text-white px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-[#2a5a74] border-none">
+                  Guardar visita
+                </button>
+                <button type="button" id="cancelEditBtn"
+                  class="hidden bg-transparent text-autumn border border-autumn px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-autumn/10">
+                  Cancelar edición
+                </button>
+                <button type="button" id="addTerritorioBtn"
+                  class="bg-transparent text-stone border border-dashed border-stone px-2 py-2 rounded text-sm cursor-pointer transition-colors hover:bg-stone/10">
+                  + Agregar otro territorio (máx. 3)
+                </button>
+              </form>
+              <p id="formMessage" class="font-medium mt-4 text-sm"></p>
+            </aside>
 
-            <label class="flex flex-col gap-1 font-medium text-sm">
-              Persona
-              <input
-                type="text"
-                id="persona"
-                required
-                list="listaPersonas"
-                placeholder="Escribe o elige una persona"
-                class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1"
-              />
-              <datalist id="listaPersonas">
-                {PERSONAS.map((p) => (
-                  <option value={p}></option>
-                ))}
-              </datalist>
-            </label>
-
-            <label class="flex flex-col gap-1 font-medium text-sm">
-              Turno
-              <select id="turno" required class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1">
-                <option value="">Elige el turno</option>
-                <option value="Mañana">Mañana</option>
-                <option value="Tarde">Tarde</option>
-              </select>
-            </label>
-
-            <label class="flex flex-col gap-1 font-medium text-sm">
-              Cantidad de personas que salieron
-              <input
-                type="number"
-                id="cantidadPersonas"
-                min="1"
-                placeholder="Ej. 2"
-                class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1"
-              />
-            </label>
-
-            <label class="flex flex-col gap-1 font-medium text-sm">
-              Territorio
-              <select id="territorio" required class="px-2 py-2 border border-stone rounded text-sm bg-white focus:outline-2 focus:outline-stone focus:outline-offset-1">
-                <option value="">Selecciona un territorio</option>
-                {TERRITORIOS.map((t) => (
-                  <option value={t.numero}>Territorio {t.numero} — {t.letras.length} cuadras</option>
-                ))}
-              </select>
-            </label>
-
-            <label class="flex flex-col gap-1 font-medium text-sm">
-              Cuadras visitadas
-              <div id="cuadrasCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 bg-white rounded p-2 border border-stone"></div>
-            </label>
-
-            <button type="submit" id="submitBtn" class="bg-stone text-white px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-[#2a5a74] border-none">
-              Guardar visita
-            </button>
-            <button type="button" id="cancelEditBtn" class="hidden bg-transparent text-autumn border border-autumn px-4 py-2 rounded text-base font-medium cursor-pointer transition-colors hover:bg-autumn/10">
-              Cancelar edición
-            </button>
-            <button type="button" id="addTerritorioBtn" class="bg-transparent text-stone border border-dashed border-stone px-2 py-2 rounded text-sm cursor-pointer transition-colors hover:bg-stone/10">
-              + Agregar otro territorio (máx. 3)
-            </button>
-          </form>
-
-          <p id="formMessage" class="font-medium mt-4 text-sm"></p>
-        </aside>
-
-        <section id="contentRegistro" class="bg-mist p-6 rounded-lg">
-          <h2 class="text-lg font-semibold mb-4 text-charcoal border-b-2 border-stone pb-2">
-            Historial de visitas
-          </h2>
-          <p id="statusMessage" class="font-medium mb-4 text-sm"></p>
-          <div id="tablaContainer" class="overflow-x-auto"></div>
+            <div class="bg-mist p-6 rounded-lg">
+              <h2 class="text-lg font-semibold mb-4 text-charcoal border-b-2 border-stone pb-2">
+                Historial de visitas
+              </h2>
+              <p id="statusMessage" class="font-medium mb-4 text-sm"></p>
+              <div id="tablaContainer" class="overflow-x-auto"></div>
+            </div>
+          </div>
         </section>
 
         <section id="contentPendientes" class="bg-mist p-6 rounded-lg hidden">
@@ -198,7 +183,6 @@ const PERSONAS = [
       // ---- Pestañas: muestra el contenido de la pestaña activa ----
       const tabs = document.querySelectorAll('.tab');
       const mainEl = document.querySelector('main');
-      const asideForm = document.getElementById('asideForm');
       const contentAsignaciones = document.getElementById('contentAsignaciones');
       const tabContents = {
         registro: document.getElementById('contentRegistro'),
@@ -217,8 +201,6 @@ const PERSONAS = [
             contentAsignaciones.classList.add('hidden');
             Object.values(tabContents).forEach((c) => c.classList.add('hidden'));
             tabContents[btn.dataset.tab].classList.remove('hidden');
-            // El formulario de registro solo se muestra en la pestaña "Registro"
-            asideForm.classList.toggle('hidden', btn.dataset.tab !== 'registro');
           }
         });
       });
