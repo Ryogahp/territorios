@@ -43,6 +43,9 @@ const PERSONAS = [
           <button class="tab bg-transparent text-white/70 hover:bg-white/10 hover:text-white border-none px-4 py-2 text-sm font-medium cursor-pointer rounded-t-lg transition-colors" data-tab="asignaciones">
             S-13_S
           </button>
+          <button class="tab bg-transparent text-white/70 hover:bg-white/10 hover:text-white border-none px-4 py-2 text-sm font-medium cursor-pointer rounded-t-lg transition-colors" data-tab="control">
+            Control de salidas
+          </button>
         </nav>
       </header>
 
@@ -127,6 +130,20 @@ const PERSONAS = [
           </h2>
           <div id="territoriosList" class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 items-start content-start"></div>
         </section>
+
+        <section id="contentControl" class="bg-mist p-6 rounded-lg hidden">
+          <h2 class="text-lg font-semibold mb-4 text-charcoal border-b-2 border-stone pb-2">
+            Control de salidas diarias
+          </h2>
+          <div class="mb-4">
+            <label class="flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <input type="checkbox" id="soloSinSalida" class="cursor-pointer" />
+              Mostrar solo días sin salida registrada
+            </label>
+          </div>
+          <div id="resumenControl" class="flex flex-wrap gap-2 mb-3"></div>
+          <div id="controlContainer" class="flex flex-col gap-3"></div>
+        </section>
       </main>
 
       <section id="contentAsignaciones" class="hidden w-screen relative left-1/2 -translate-x-1/2 px-4 pb-8">
@@ -187,6 +204,7 @@ const PERSONAS = [
       const tabContents = {
         registro: document.getElementById('contentRegistro'),
         pendientes: document.getElementById('contentPendientes'),
+        control: document.getElementById('contentControl'),
       };
 
       tabs.forEach((btn) => {
@@ -535,6 +553,9 @@ const PERSONAS = [
       const tablaAsignaciones = document.getElementById('tablaAsignaciones');
       const mesInicioInput = document.getElementById('mesInicio');
       const mesFinInput = document.getElementById('mesFin');
+      const soloSinSalida = document.getElementById('soloSinSalida');
+      const resumenControl = document.getElementById('resumenControl');
+      const controlContainer = document.getElementById('controlContainer');
 
       // ---- Utilidades de meses (formato YYYY-MM) ----
       function pad2(n) { return String(n).padStart(2, '0'); }
@@ -691,6 +712,102 @@ const PERSONAS = [
           </table>`;
       }
 
+      const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+      function isoFecha(d) {
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+      }
+      function nombreDiaSemana(iso) {
+        return DIAS_SEMANA[new Date(iso + 'T00:00:00').getDay()];
+      }
+
+      // ---- Control de salidas: día por día, marcando días sin salida ----
+      function renderControl() {
+        if (!visitas.length) {
+          controlContainer.innerHTML = '<p class="text-sm text-gray-600">No hay visitas registradas.</p>';
+          resumenControl.innerHTML = '';
+          return;
+        }
+
+        const porFecha = {};
+        const soloFaltan = soloSinSalida.checked;
+        visitas.forEach((v) => {
+          (porFecha[v.fecha] = porFecha[v.fecha] || []).push(v);
+        });
+
+        const fechasInfo = Object.keys(porFecha).sort();
+        const inicio = new Date(fechasInfo[0] + 'T00:00:00');
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+
+        const dias = [];
+        for (let d = new Date(inicio); d <= hoy; d.setDate(d.getDate() + 1)) dias.push(isoFecha(d));
+        dias.sort().reverse();
+
+        let conSalida = 0;
+        let sinSalida = 0;
+        const conSalidaSet = new Set(Object.keys(porFecha));
+        dias.forEach((iso) => { if (conSalidaSet.has(iso)) conSalida++; else sinSalida++; });
+
+        resumenControl.innerHTML = `
+          <span class="text-xs px-3 py-1 rounded-full bg-stone text-white">Total de días: ${dias.length}</span>
+          <span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-800 border border-green-300">Días con salida: ${conSalida}</span>
+          <span class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">Días sin salida registrada: ${sinSalida}</span>`;
+
+        const porMes = {};
+        dias.forEach((iso) => {
+          if (soloFaltan && conSalidaSet.has(iso)) return;
+          const mes = iso.slice(0, 7);
+          (porMes[mes] = porMes[mes] || []).push(iso);
+        });
+
+        const meses = Object.keys(porMes).sort().reverse();
+        controlContainer.innerHTML = meses.map((mes) => {
+          const filas = porMes[mes].map((iso) => {
+            const salidas = porFecha[iso] || [];
+            let fechaCelda = `
+              <div class="font-semibold text-charcoal">${formatearFecha(iso)}</div>
+              <div class="text-[10px] text-gray-500">${nombreDiaSemana(iso)}</div>`;
+            if (salidas.length === 0) {
+              const esHoy = iso === isoFecha(hoy);
+              return `
+                <tr class="bg-amber-50">
+                  <td class="px-2 py-1.5 border-b border-gray-200 align-top">${fechaCelda}</td>
+                  <td colspan="4" class="px-2 py-1.5 border-b border-gray-200 text-autumn italic text-xs">
+                    Sin salidas registradas${esHoy ? ' (hoy)' : ''} — posiblemente no anotaron
+                  </td>
+                </tr>`;
+            }
+            return salidas.map((s, i) => `
+              <tr class="${i % 2 ? 'bg-white' : 'bg-gray-50'}">
+                ${i === 0 ? `<td class="px-2 py-1.5 border-b border-gray-200 align-top" rowspan="${salidas.length}">${fechaCelda}</td>` : ''}
+                <td class="px-2 py-1.5 border-b border-gray-200 text-sm font-medium text-center whitespace-nowrap">T${s.territorio_id}</td>
+                <td class="px-2 py-1.5 border-b border-gray-200 text-sm">${s.persona}</td>
+                <td class="px-2 py-1.5 border-b border-gray-200 text-sm text-center whitespace-nowrap">${s.turno || '—'}</td>
+                <td class="px-2 py-1.5 border-b border-gray-200 text-sm">${expandirCuadras(s.cuadras).join(', ') || '—'}</td>
+              </tr>`).join('');
+          }).join('');
+          return `
+            <div class="bg-white rounded-md border border-stone/20 shadow-sm overflow-hidden">
+              <h3 class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white bg-stone">${nombreMes(mes)}</h3>
+              <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th class="px-2 py-1 text-[10px] uppercase text-gray-500 text-left bg-gray-100 border-b border-gray-200">Día</th>
+                      <th class="px-2 py-1 text-[10px] uppercase text-gray-500 text-center bg-gray-100 border-b border-gray-200">Territorio</th>
+                      <th class="px-2 py-1 text-[10px] uppercase text-gray-500 text-left bg-gray-100 border-b border-gray-200">Persona</th>
+                      <th class="px-2 py-1 text-[10px] uppercase text-gray-500 text-center bg-gray-100 border-b border-gray-200">Turno</th>
+                      <th class="px-2 py-1 text-[10px] uppercase text-gray-500 text-left bg-gray-100 border-b border-gray-200">Cuadras</th>
+                    </tr>
+                  </thead>
+                  <tbody>${filas}</tbody>
+                </table>
+              </div>
+            </div>`;
+        }).join('');
+      }
+
       // ---- Carga las visitas desde el servidor y actualiza la interfaz ----
       async function cargarVisitas() {
         try {
@@ -700,6 +817,7 @@ const PERSONAS = [
           renderTabla();
           renderTerritorios();
           renderAsignaciones();
+          renderControl();
         } catch (err) {
           statusMessage.textContent = err.message;
           statusMessage.classList.remove('text-green-700');
@@ -881,6 +999,7 @@ const PERSONAS = [
       // Asignaciones: al cambiar los meses se reconstruye la tabla
       mesInicioInput.addEventListener('change', renderAsignaciones);
       mesFinInput.addEventListener('change', renderAsignaciones);
+      soloSinSalida.addEventListener('change', renderControl);
 
       addTerritorioBtn.addEventListener('click', () => {
         if (filasTerritorio >= 3) return;
