@@ -765,11 +765,9 @@ const PERSONAS = [
         controlContainer.innerHTML = meses.map((mes) => {
           const filas = porMes[mes].map((iso) => {
             const salidas = porFecha[iso] || [];
-            const totalPers = salidas.reduce((acc, s) => acc + (Number(s.cantidad_personas) || 1), 0);
             let fechaCelda = `
               <div class="font-semibold text-charcoal">${formatearFecha(iso)}</div>
-              <div class="text-[10px] text-gray-500">${nombreDiaSemana(iso)}</div>
-              <div class="text-[10px] font-semibold text-charcoal/70 mt-0.5">Total: ${totalPers} ${totalPers === 1 ? 'persona' : 'personas'}</div>`;
+              <div class="text-[10px] text-gray-500">${nombreDiaSemana(iso)}</div>`;
             if (salidas.length === 0) {
               const esHoy = iso === isoFecha(hoy);
               return `
