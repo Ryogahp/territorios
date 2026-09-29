@@ -644,13 +644,15 @@ const PERSONAS = [
 
         const celdaVacia = '<span class="text-gray-300">&mdash;</span>';
 
-        // Recopilar todas las personas únicas de TODOS los territorios en el rango
-        const todasPersonasSet = new Set();
-        visitas
-          .filter((v) => v.fecha >= desde && v.fecha <= hasta)
-          .forEach((v) => todasPersonasSet.add(v.persona));
-        const todasPersonas = [...todasPersonasSet];
-        const nBloques = Math.max(4, todasPersonas.length);
+        // Cada territorio arma sus propios bloques: una columna por cada persona
+        // que visitó ESE territorio dentro del rango.
+        const personasPorTerritorio = {};
+        TERRITORIOS.forEach((t) => {
+          const enRango = visitas
+            .filter((v) => v.territorio_id === t.numero && v.fecha >= desde && v.fecha <= hasta);
+          personasPorTerritorio[t.numero] = [...new Set(enRango.map((v) => v.persona))];
+        });
+        const nBloques = Math.max(4, ...Object.values(personasPorTerritorio).map((p) => p.length));
 
         const filasHtml = TERRITORIOS.map((t) => {
           const todasLetras = new Set(t.letras);
@@ -677,15 +679,20 @@ const PERSONAS = [
             .filter((v) => v.territorio_id === t.numero && v.fecha >= desde && v.fecha <= hasta)
             .sort((x, y) => x.fecha.localeCompare(y.fecha));
 
-          // Mapa persona -> visitas
+          // Mapa persona -> visitas (solo las personas de ESTE territorio)
           const personaVisitas = {};
           enRango.forEach((v) => {
             if (!personaVisitas[v.persona]) personaVisitas[v.persona] = [];
             personaVisitas[v.persona].push(v);
           });
 
-          // Acumulación por persona para detectar completado
-          const personaAcum = {};
+          // Personas de este territorio (las que lo visitaron en el rango),
+          // ordenadas por la fecha de su primera visita en el rango
+          const personasT = (personasPorTerritorio[t.numero] || []).slice().sort((a, b) => {
+            const fa = personaVisitas[a].map((v) => v.fecha).sort()[0];
+            const fb = personaVisitas[b].map((v) => v.fecha).sort()[0];
+            return fa.localeCompare(fb);
+          });
 
           // Fila 1: nombres (colspan 2 cada bloque)
           const row1 = [];
@@ -693,7 +700,7 @@ const PERSONAS = [
           const row2 = [];
 
           for (let i = 0; i < nBloques; i++) {
-            const persona = todasPersonas[i];
+            const persona = personasT[i];
 
             if (!persona || !personaVisitas[persona]) {
               row1.push(`<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center">${celdaVacia}</td>`);
@@ -701,16 +708,16 @@ const PERSONAS = [
               continue;
             }
 
-            if (!personaAcum[persona]) personaAcum[persona] = new Set();
+            const personaAcum = new Set();
             const visitasPersona = personaVisitas[persona].sort((x, y) => x.fecha.localeCompare(y.fecha));
 
-            visitasPersona.forEach((v) => expandirCuadras(v.cuadras).forEach((l) => personaAcum[persona].add(l)));
+            visitasPersona.forEach((v) => expandirCuadras(v.cuadras).forEach((l) => personaAcum.add(l)));
 
             const inicioFecha = formatearFecha(visitasPersona[0].fecha);
 
             let finFecha = '';
             let cubre = true;
-            todasLetras.forEach((l) => { if (!personaAcum[persona].has(l)) cubre = false; });
+            todasLetras.forEach((l) => { if (!personaAcum.has(l)) cubre = false; });
             if (cubre) finFecha = formatearFecha(visitasPersona[visitasPersona.length - 1].fecha);
 
             row1.push(`<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center font-medium text-sm">${persona}</td>`);
