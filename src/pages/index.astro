@@ -765,15 +765,17 @@ const PERSONAS = [
         controlContainer.innerHTML = meses.map((mes) => {
           const filas = porMes[mes].map((iso) => {
             const salidas = porFecha[iso] || [];
+            const totalPers = salidas.reduce((acc, s) => acc + (Number(s.cantidad_personas) || 1), 0);
             let fechaCelda = `
               <div class="font-semibold text-charcoal">${formatearFecha(iso)}</div>
-              <div class="text-[10px] text-gray-500">${nombreDiaSemana(iso)}</div>`;
+              <div class="text-[10px] text-gray-500">${nombreDiaSemana(iso)}</div>
+              <div class="text-[10px] font-semibold text-charcoal/70 mt-0.5">Total: ${totalPers} ${totalPers === 1 ? 'persona' : 'personas'}</div>`;
             if (salidas.length === 0) {
               const esHoy = iso === isoFecha(hoy);
               return `
                 <tr class="bg-amber-50">
                   <td class="px-2 py-1.5 border-b border-gray-200 align-top">${fechaCelda}</td>
-                  <td colspan="4" class="px-2 py-1.5 border-b border-gray-200 text-autumn italic text-xs">
+                  <td colspan="5" class="px-2 py-1.5 border-b border-gray-200 text-autumn italic text-xs">
                     Sin salidas registradas${esHoy ? ' (hoy)' : ''} — posiblemente no anotaron
                   </td>
                 </tr>`;
@@ -784,6 +786,7 @@ const PERSONAS = [
                 <td class="px-2 py-1.5 border-b border-gray-200 text-sm font-medium text-center whitespace-nowrap">T${s.territorio_id}</td>
                 <td class="px-2 py-1.5 border-b border-gray-200 text-sm">${s.persona}</td>
                 <td class="px-2 py-1.5 border-b border-gray-200 text-sm text-center whitespace-nowrap">${s.turno || '—'}</td>
+                <td class="px-2 py-1.5 border-b border-gray-200 text-sm text-center whitespace-nowrap">${Number(s.cantidad_personas) || '—'}</td>
                 <td class="px-2 py-1.5 border-b border-gray-200 text-sm">${expandirCuadras(s.cuadras).join(', ') || '—'}</td>
               </tr>`).join('');
           }).join('');
@@ -798,6 +801,7 @@ const PERSONAS = [
                       <th class="px-2 py-1 text-[10px] uppercase text-gray-500 text-center bg-gray-100 border-b border-gray-200">Territorio</th>
                       <th class="px-2 py-1 text-[10px] uppercase text-gray-500 text-left bg-gray-100 border-b border-gray-200">Persona</th>
                       <th class="px-2 py-1 text-[10px] uppercase text-gray-500 text-center bg-gray-100 border-b border-gray-200">Turno</th>
+                      <th class="px-2 py-1 text-[10px] uppercase text-gray-500 text-center bg-gray-100 border-b border-gray-200">N° pers</th>
                       <th class="px-2 py-1 text-[10px] uppercase text-gray-500 text-left bg-gray-100 border-b border-gray-200">Cuadras</th>
                     </tr>
                   </thead>
