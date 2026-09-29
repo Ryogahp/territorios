@@ -701,10 +701,11 @@ const PERSONAS = [
 
           for (let i = 0; i < nBloques; i++) {
             const persona = personasT[i];
+            const sep = i > 0 ? ' border-l-2 border-black' : '';
 
             if (!persona || !personaVisitas[persona]) {
-              row1.push(`<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center">${celdaVacia}</td>`);
-              row2.push(`<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center">${celdaVacia}</td>`);
+              row1.push(`<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center${sep}">${celdaVacia}</td>`);
+              row2.push(`<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center${sep}">${celdaVacia}</td>`);
               continue;
             }
 
@@ -720,9 +721,9 @@ const PERSONAS = [
             todasLetras.forEach((l) => { if (!personaAcum.has(l)) cubre = false; });
             if (cubre) finFecha = formatearFecha(visitasPersona[visitasPersona.length - 1].fecha);
 
-            row1.push(`<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center font-medium text-sm">${persona}</td>`);
+            row1.push(`<td colspan="2" class="border-b border-gray-300 px-2 py-1 text-center font-medium text-sm${sep}">${persona}</td>`);
             row2.push(
-              `<td class="border-b border-gray-300 px-2 py-1 text-xs text-center whitespace-nowrap">${inicioFecha}</td>` +
+              `<td class="border-b border-gray-300 px-2 py-1 text-xs text-center whitespace-nowrap${sep}">${inicioFecha}</td>` +
               `<td class="border-b border-gray-300 px-2 py-1 text-xs text-center whitespace-nowrap">${finFecha || celdaVacia}</td>`
             );
           }
@@ -740,9 +741,10 @@ const PERSONAS = [
         const enc1 = [];
         const enc2 = [];
         for (let i = 0; i < nBloques; i++) {
-          enc1.push(`<th colspan="2" class="px-2 py-1 bg-stone text-white border-l border-white/30">Asignado a</th>`);
+          const sep = i > 0 ? ' border-l-2 border-black' : '';
+          enc1.push(`<th colspan="2" class="px-2 py-1 bg-stone text-white${sep}">Asignado a</th>`);
           enc2.push(
-            `<th class="px-2 py-1 bg-stone text-white text-[11px] font-normal border-l border-white/30">Fecha que se asignó</th>` +
+            `<th class="px-2 py-1 bg-stone text-white text-[11px] font-normal${sep}">Fecha que se asignó</th>` +
             `<th class="px-2 py-1 bg-stone text-white text-[11px] font-normal">Fecha que se completó</th>`
           );
         }
