@@ -1,15 +1,129 @@
 @import "tailwindcss";
 
-html {
-  color-scheme: light;
-}
+/* Activa la variante `dark:` basada en la clase .dark en <html> */
+@custom-variant dark (&:where(.dark, .dark *));
 
-/* Paleta de colores del proyecto (se usan como bg-mist, text-stone, etc.) */
+/* Paleta de marca + tokens semánticos (tema claro por defecto) */
 @theme {
   --color-mist: #90AFC5;
   --color-stone: #336B87;
+  --color-stone-dark: #2a5a74;
   --color-charcoal: #2A3132;
   --color-autumn: #763626;
+
+  --color-page: #e9eef3;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8fafc;
+  --color-surface-3: #f1f5f9;
+  --color-ink: #2A3132;
+  --color-ink-muted: #64748b;
+  --color-ink-subtle: #94a3b8;
+  --color-line: #e2e8f0;
+  --color-brand: #336B87;
+}
+
+/* Tema oscuro: sobreescribe los tokens semánticos */
+.dark {
+  color-scheme: dark;
+
+  --color-page: #0b1220;
+  --color-surface: #1e293b;
+  --color-surface-2: #172033;
+  --color-surface-3: #263449;
+  --color-ink: #e5eaf1;
+  --color-ink-muted: #a3b1c2;
+  --color-ink-subtle: #6b7a90;
+  --color-line: #334155;
+  --color-brand: #9dc3dc;
+}
+
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-page text-ink antialiased;
+  background-image:
+    radial-gradient(1100px 560px at 100% -10%, rgba(144, 175, 197, 0.35), transparent 60%),
+    radial-gradient(900px 520px at -10% 110%, rgba(51, 107, 135, 0.12), transparent 55%);
+  background-attachment: fixed;
+}
+
+html.dark body {
+  background-image:
+    radial-gradient(1100px 560px at 100% -10%, rgba(51, 107, 135, 0.30), transparent 60%),
+    radial-gradient(900px 520px at -10% 110%, rgba(42, 90, 116, 0.20), transparent 55%);
+}
+
+::selection {
+  @apply bg-stone text-white;
+}
+
+/* Scrollbar sutil en pantallas grandes */
+@media (min-width: 768px) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-mist) transparent;
+  }
+}
+
+@layer components {
+  /* Tarjeta base */
+  .card {
+    @apply rounded-xl bg-surface shadow-sm ring-1 ring-line;
+  }
+
+  /* Título de sección */
+  .section-title {
+    @apply mb-4 flex items-center gap-2 border-b-2 border-mist/60 pb-2 text-lg font-semibold text-brand;
+  }
+
+  /* Campo de formulario */
+  .field-label {
+    @apply flex flex-col gap-1 text-sm font-medium text-ink;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink shadow-sm transition
+           placeholder:text-ink-subtle
+           focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40;
+  }
+
+  /* Botones */
+  .btn-primary {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-stone px-4 py-2.5 text-sm font-semibold
+           text-white shadow-sm transition hover:bg-stone-dark active:scale-[.98]
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-stone/50 focus-visible:ring-offset-2
+           disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-surface px-4 py-2.5 text-sm font-semibold
+           text-brand shadow-sm ring-1 ring-inset ring-brand/30 transition hover:bg-mist/15 active:scale-[.98]
+           focus:outline-none;
+  }
+
+  .btn-danger {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-autumn px-4 py-2.5 text-sm
+           font-semibold text-autumn transition hover:bg-autumn/10 active:scale-[.98]
+           dark:border-red-400/60 dark:text-red-300 dark:hover:bg-red-400/10;
+  }
+
+  .btn-dashed {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-brand/50 px-3 py-2
+           text-sm font-medium text-brand transition hover:bg-brand/10;
+  }
+
+  /* Pestañas */
+  .tab {
+    @apply cursor-pointer border-none bg-transparent px-4 py-2.5 text-sm font-medium transition-colors;
+  }
+
+  /* Etiqueta / pill */
+  .badge {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-medium;
+  }
 }
 
 /* Línea separadora entre grupos de territorio en la tabla */
@@ -18,6 +132,10 @@ html {
 }
 
 /* Pestaña activa */
-.tab.active {
-  @apply bg-mist text-charcoal hover:bg-mist hover:text-charcoal;
+.nav-desktop .tab.active {
+  @apply bg-stone text-white shadow-sm dark:bg-white dark:text-stone;
+}
+
+.nav-mobile .tab.active {
+  @apply bg-stone/10 font-semibold text-brand dark:bg-white/15 dark:text-white;
 }
