@@ -774,7 +774,7 @@ const PERSONAS = [
           return `
             <tr>
               <td rowspan="2" class="border-b border-line px-2 py-1 font-semibold text-center text-slate-800 bg-gradient-to-r from-[#d7e5f0] to-[#b9d4e6]">${t.numero}</td>
-              <td rowspan="2" class="border-b border-line px-2 py-1 text-xs text-center bg-surface-2">${ultimaFechaCompletado ? formatearFecha(ultimaFechaCompletado) : celdaVacia}</td>
+              <td rowspan="2" class="border-b border-line px-2 py-1 text-xs text-center bg-surface-2">${ultimaFechaCompletado ? formatearFecha(ultimaFechaCompletado) : '30/06/2026'}</td>
               ${row1.join('')}
             </tr>
             <tr>${row2.join('')}</tr>`;
