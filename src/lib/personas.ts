@@ -1,0 +1,20 @@
+/** Personas que suelen salir a visitar territorios. */
+export const PERSONAS = [
+  'Jose Luis Huanca Cruz',
+  'Alex Smith',
+  'Andres Tarqui',
+  'Enrique Callisaya',
+  'Fernando Figueredo',
+  'Franklin Salas',
+  'Jherson Zegarra',
+  'Jose Alvares',
+  'Jose Luis Van Geendertailen',
+  'Manuel Villegas',
+  'Marco Sanchez',
+  'Marcos Fernadez',
+  'Mauricio Mendez',
+  'Mike Mamani',
+  'Oscar Callizaya',
+  'Ramiro Narvaes',
+  'Victor Villegas',
+] as const;

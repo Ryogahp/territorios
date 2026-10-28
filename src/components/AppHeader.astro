@@ -1,0 +1,109 @@
+---
+import { TABS } from '../lib/tabs';
+---
+
+<header
+  class="rounded-none border-b border-line bg-gradient-to-br from-white to-[#e7eff5] text-stone shadow-sm md:mb-6 md:rounded-xl md:shadow-md dark:border-transparent dark:from-stone dark:to-stone-dark dark:text-white"
+>
+  <div class="flex items-center justify-between gap-3 px-4 pt-4 md:px-6">
+    <h1 class="text-lg font-semibold tracking-tight md:text-2xl">Registro de Territorios Visitados</h1>
+    <div class="flex items-center gap-1">
+      <button
+        id="themeBtn"
+        type="button"
+        aria-label="Cambiar tema"
+        class="cursor-pointer rounded-lg p-1.5 text-stone transition hover:bg-stone/10 dark:text-white/90 dark:hover:bg-white/10"
+      >
+        <svg
+          id="iconMoon"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.8"
+          stroke="currentColor"
+          class="h-5 w-5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"
+          ></path>
+        </svg>
+        <svg
+          id="iconSun"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.8"
+          stroke="currentColor"
+          class="hidden h-5 w-5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
+          ></path>
+        </svg>
+      </button>
+      <button
+        id="menuBtn"
+        type="button"
+        aria-label="Abrir menú"
+        class="cursor-pointer rounded-lg px-2 py-1 text-2xl leading-none text-stone transition hover:bg-stone/10 md:hidden dark:text-white/90 dark:hover:bg-white/10"
+      >
+        &#9776;
+      </button>
+    </div>
+  </div>
+
+  <nav class="nav-desktop hidden flex-wrap gap-1 px-3 pt-3 pb-3 md:flex">
+    {TABS.map((tab) => (
+      <button
+        class:list={[
+          'tab',
+          'rounded-lg',
+          'text-stone/70',
+          'hover:bg-stone/10',
+          'hover:text-stone',
+          'dark:text-white/75',
+          'dark:hover:bg-white/10',
+          'dark:hover:text-white',
+          { active: tab.id === 'registro' },
+        ]}
+        data-tab={tab.id}
+      >
+        {tab.etiqueta}
+      </button>
+    ))}
+  </nav>
+</header>
+
+<div id="mobileMenu" class="fixed inset-0 z-50 hidden md:hidden">
+  <div id="menuOverlay" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+  <nav
+    id="menuSidebar"
+    class="nav-mobile absolute top-0 left-0 flex h-full w-72 max-w-[85vw] -translate-x-full flex-col gap-1 overflow-y-auto bg-surface p-4 text-ink shadow-2xl transition-transform duration-300 dark:bg-stone dark:text-white"
+  >
+    <p class="px-2 pt-1 pb-2 text-xs font-medium tracking-wide text-ink-subtle uppercase dark:text-white/50">Menú</p>
+    {TABS.map((tab) => (
+      <button
+        class:list={[
+          'tab',
+          'w-full',
+          'rounded-lg',
+          'text-left',
+          'text-ink-muted',
+          'hover:bg-stone/10',
+          'hover:text-stone',
+          'dark:text-white/85',
+          'dark:hover:bg-white/10',
+          'dark:hover:text-white',
+          { active: tab.id === 'registro' },
+        ]}
+        data-tab={tab.id}
+      >
+        {tab.etiqueta}
+      </button>
+    ))}
+  </nav>
+</div>

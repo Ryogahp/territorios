@@ -1,0 +1,30 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  titulo?: string;
+}
+
+const { titulo = 'Registro de Territorios' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{titulo}</title>
+    <script is:inline>
+      try {
+        if (localStorage.getItem('theme') === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {
+        // Sin localStorage se usa el tema claro por defecto.
+      }
+    </script>
+  </head>
+  <body class="min-h-screen font-sans">
+    <slot />
+  </body>
+</html>

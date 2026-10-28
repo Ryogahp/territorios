@@ -1,0 +1,28 @@
+---
+---
+
+<section
+  id="contentAsignaciones"
+  data-tab-panel="asignaciones"
+  class="tab-panel relative left-1/2 hidden w-screen -translate-x-1/2 px-0 pb-4 md:px-4 md:pb-8"
+>
+  <div class="card p-3 md:p-4">
+    <h2 class="section-title">Plan de asignación de territorios</h2>
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <label class="field-label">
+        Mes de inicio
+        <input type="month" id="mesInicio" class="input" />
+      </label>
+      <label class="field-label">
+        Mes de fin
+        <input type="month" id="mesFin" class="input" />
+      </label>
+      <p class="max-w-md text-xs text-ink-muted">
+        La tabla muestra las visitas de los meses seleccionados. "Última fecha completado" muestra la
+        última visita anterior al mes de inicio.
+      </p>
+    </div>
+    <p id="asignacionesMessage" class="mb-3 text-sm font-medium" aria-live="polite"></p>
+    <div id="tablaAsignaciones" class="overflow-x-auto"></div>
+  </div>
+</section>

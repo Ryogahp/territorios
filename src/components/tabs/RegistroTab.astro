@@ -1,0 +1,76 @@
+---
+import { PERSONAS } from '../../lib/personas';
+import { TERRITORIOS } from '../../lib/territorios';
+---
+
+<section id="contentRegistro" data-tab-panel="registro" class="tab-panel">
+  <div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-3 md:gap-6">
+    <aside id="asideForm" class="card h-fit p-4 md:p-6">
+      <h2 class="section-title">Registrar visita</h2>
+      <form id="visitaForm" class="flex flex-col gap-4">
+        <label class="field-label">
+          Fecha
+          <input type="date" id="fecha" required class="input" />
+        </label>
+        <label class="field-label">
+          Persona
+          <input
+            type="text"
+            id="persona"
+            required
+            maxlength="120"
+            list="listaPersonas"
+            placeholder="Escribe o elige una persona"
+            class="input"
+          />
+          <datalist id="listaPersonas">
+            {PERSONAS.map((persona) => <option value={persona}></option>)}
+          </datalist>
+        </label>
+        <label class="field-label">
+          Turno
+          <select id="turno" required class="input">
+            <option value="">Elige el turno</option>
+            <option value="Mañana">Mañana</option>
+            <option value="Tarde">Tarde</option>
+          </select>
+        </label>
+        <label class="field-label">
+          Cantidad de personas que salieron
+          <input type="number" id="cantidadPersonas" min="1" placeholder="Ej. 2" class="input" />
+        </label>
+        <label class="field-label">
+          Territorio
+          <select id="territorio" required class="input">
+            <option value="">Selecciona un territorio</option>
+            {TERRITORIOS.map((territorio) => (
+              <option value={territorio.numero}>
+                Territorio {territorio.numero} — {territorio.letras.length} cuadras
+              </option>
+            ))}
+          </select>
+        </label>
+        <label class="field-label">
+          Cuadras visitadas
+          <div
+            id="cuadrasCheckboxes"
+            class="grid grid-cols-2 gap-2 rounded-lg border border-mist/50 bg-surface-2 p-2 sm:grid-cols-3 lg:grid-cols-4"
+          >
+          </div>
+        </label>
+        <button type="submit" id="submitBtn" class="btn-primary w-full">Guardar visita</button>
+        <button type="button" id="cancelEditBtn" class="btn-danger hidden w-full">Cancelar edición</button>
+        <button type="button" id="addTerritorioBtn" class="btn-dashed w-full">
+          + Agregar otro territorio (máx. 3)
+        </button>
+      </form>
+      <p id="formMessage" class="mt-4 text-sm font-medium" aria-live="polite"></p>
+    </aside>
+
+    <div class="card p-4 md:p-6">
+      <h2 class="section-title">Historial de visitas</h2>
+      <p id="statusMessage" class="font-medium mb-4 text-sm" aria-live="polite"></p>
+      <div id="tablaContainer" class="overflow-x-auto"></div>
+    </div>
+  </div>
+</section>

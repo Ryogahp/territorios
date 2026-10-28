@@ -1,0 +1,20 @@
+---
+---
+
+<section id="contentProgramar" data-tab-panel="programar" class="tab-panel card hidden p-4 md:p-6">
+  <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h2 class="section-title">Programar el mes</h2>
+      <p class="text-xs text-ink-muted">
+        Consulta todos los días del mes y las salidas que ya están registradas.
+      </p>
+    </div>
+    <label class="field-label">
+      Mes
+      <input type="month" id="mesProgramar" class="input" />
+    </label>
+  </div>
+  <p id="programarMessage" class="mb-3 text-sm font-medium" aria-live="polite"></p>
+  <div id="resumenProgramar" class="mb-3 flex flex-wrap gap-2"></div>
+  <div id="programarContainer" class="overflow-x-auto"></div>
+</section>
