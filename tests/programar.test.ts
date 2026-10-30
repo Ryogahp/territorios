@@ -4,6 +4,7 @@ import {
   construirProgramacionMes,
   generarProgramacionAutomatica,
   normalizarCondiciones,
+  normalizarTerritoriosAnulados,
   type CondicionesProgramacion,
   type OpcionCondicion,
   type SugerenciaProgramada,
@@ -211,6 +212,38 @@ describe('generación automática', () => {
     );
 
     expect(sugerencias[0]?.territorioId).toBe(2);
+  });
+
+  it('omite los territorios anulados', () => {
+    const { sugerencias } = generarProgramacionAutomatica(
+      [],
+      conZona('Irpavi 2', 1, 'Mañana'),
+      { hoy: '2026-10-05', territoriosAnulados: [46, 47] },
+    );
+
+    expect(sugerencias[0]?.territorioId).toBe(48);
+    expect(
+      sugerencias.every(
+        (sugerencia) => sugerencia.territorioId !== 46 && sugerencia.territorioId !== 47,
+      ),
+    ).toBe(true);
+  });
+
+  it('no genera salidas si todos los territorios de la zona están anulados', () => {
+    const { sugerencias } = generarProgramacionAutomatica(
+      [],
+      conZona('Irpavi 2', 1, 'Mañana'),
+      { hoy: '2026-10-05', territoriosAnulados: [46, 47, 48, 49] },
+    );
+
+    expect(sugerencias).toEqual([]);
+  });
+
+  it('normaliza y limita los territorios anulados', () => {
+    expect(normalizarTerritoriosAnulados([1, 1, 60, 'x', 2.5, 3])).toEqual([1, 3]);
+    expect(
+      normalizarTerritoriosAnulados(Array.from({ length: 20 }, (_, indice) => indice + 1)),
+    ).toHaveLength(10);
   });
 
   it('permite programar mañana y tarde el mismo día', () => {

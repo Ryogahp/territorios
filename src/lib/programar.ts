@@ -1,6 +1,7 @@
 import { diasDelMes, rangoFechas, sumarMesesFecha } from './fechas';
 import {
   GRUPOS_TERRITORIOS,
+  TERRITORIOS_POR_NUMERO,
   territoriosDeZona,
   type ZonaProgramacion,
 } from './territorios';
@@ -19,6 +20,7 @@ export type CondicionesProgramacion = Record<Turno, Record<number, OpcionCondici
 /** La programación automática cubre los próximos dos meses. */
 export const MESES_VENTANA = 2;
 export const MAX_DIAS_ANULADOS = 6;
+export const MAX_TERRITORIOS_ANULADOS = 10;
 
 export interface VentanaProgramacion {
   desde: string;
@@ -60,6 +62,7 @@ export interface OpcionesGeneracion {
   hoy: string;
   meses?: number;
   diasAnulados?: string[];
+  territoriosAnulados?: number[];
 }
 
 export function condicionesVacias(): CondicionesProgramacion {
@@ -76,6 +79,20 @@ export function condicionesVacias(): CondicionesProgramacion {
 
 export function esZonaProgramacion(valor: unknown): valor is ZonaProgramacion {
   return GRUPOS_TERRITORIOS.some((grupo) => grupo.nombre === valor);
+}
+
+/** Valida y limita la lista de territorios que no deben programarse. */
+export function normalizarTerritoriosAnulados(valor: unknown): number[] {
+  if (!Array.isArray(valor)) return [];
+
+  const numeros = valor.filter(
+    (item): item is number =>
+      typeof item === 'number' &&
+      Number.isInteger(item) &&
+      TERRITORIOS_POR_NUMERO.has(item),
+  );
+
+  return [...new Set(numeros)].slice(0, MAX_TERRITORIOS_ANULADOS);
 }
 
 /** Convierte datos guardados (por ejemplo, en localStorage) en condiciones válidas. */
@@ -124,6 +141,7 @@ function ultimaVisitaPorTerritorio(visitas: Visita[]): Map<number, string> {
  * - Solo se programan fechas desde `hoy` hasta `hoy + meses`, ambas incluidas.
  * - Se respetan las condiciones de día de la semana y turno.
  * - No se programan fechas anuladas ni fechas que ya tienen una visita registrada.
+ * - No se programan los territorios incluidos en `territoriosAnulados`.
  * - Dentro de cada zona se elige el territorio con la última visita más antigua.
  * - Se evita repetir un territorio que ya tiene una visita o sugerencia en la misma
  *   fecha o en una fecha posterior; si no hay alternativa, se usa el más antiguo.
@@ -135,6 +153,7 @@ export function generarProgramacionAutomatica(
 ): { sugerencias: SugerenciaProgramada[]; ventana: VentanaProgramacion } {
   const ventana = ventanaProgramacion(opciones.hoy, opciones.meses);
   const anulados = new Set(opciones.diasAnulados ?? []);
+  const territoriosAnulados = new Set(opciones.territoriosAnulados ?? []);
   const fechasOcupadas = new Set(visitas.map((visita) => visita.fecha));
   const ultimaVisita = ultimaVisitaPorTerritorio(visitas);
   const ultimaAsignada = new Map(ultimaVisita);
@@ -149,7 +168,9 @@ export function generarProgramacionAutomatica(
       const zona = condiciones[turno]?.[diaSemana];
       if (!zona || zona === OPCION_SIN_SALIDA) continue;
 
-      const territorios = territoriosDeZona(zona);
+      const territorios = territoriosDeZona(zona).filter(
+        (territorio) => !territoriosAnulados.has(territorio.numero),
+      );
       if (territorios.length === 0) continue;
 
       const disponibles = territorios.filter((territorio) => {

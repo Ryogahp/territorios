@@ -13,14 +13,16 @@ import {
   esZonaProgramacion,
   generarProgramacionAutomatica,
   MAX_DIAS_ANULADOS,
+  MAX_TERRITORIOS_ANULADOS,
   normalizarCondiciones,
+  normalizarTerritoriosAnulados,
   OPCION_SIN_SALIDA,
   TURNOS_PROGRAMACION,
   ventanaProgramacion,
   type CondicionesProgramacion,
   type DiaProgramado,
 } from '../../lib/programar';
-import { TERRITORIOS_POR_NUMERO } from '../../lib/territorios';
+import { GRUPOS_TERRITORIOS, TERRITORIOS, TERRITORIOS_POR_NUMERO } from '../../lib/territorios';
 import type { Turno, Visita } from '../../lib/types';
 import { escaparHtml, mostrarMensaje, porId, qsa } from '../dom';
 import { suscribir, type EstadoVisitas } from '../store';
@@ -38,14 +40,19 @@ const diasAnuladosContenedor = porId<HTMLDivElement>('diasAnulados');
 const agregarDiaBtn = porId<HTMLButtonElement>('agregarDiaAnulado');
 const restablecerBtn = porId<HTMLButtonElement>('restablecerCondiciones');
 const anuladosMensaje = porId<HTMLParagraphElement>('anuladosMessage');
+const territoriosAnuladosContenedor = porId<HTMLDivElement>('territoriosAnulados');
+const agregarTerritorioBtn = porId<HTMLButtonElement>('agregarTerritorioAnulado');
+const territoriosAnuladosMensaje = porId<HTMLParagraphElement>('territoriosAnuladosMessage');
 
 let visitas: Visita[] = [];
 let condiciones: CondicionesProgramacion = condicionesVacias();
 let diasAnulados: string[] = [''];
+let territoriosAnulados: string[] = [''];
 
 interface CondicionesGuardadas {
   condiciones?: unknown;
   diasAnulados?: unknown;
+  territoriosAnulados?: unknown;
 }
 
 function esFechaISO(valor: unknown): valor is string {
@@ -67,6 +74,9 @@ function cargarCondiciones(): void {
       const fechas = guardadas.diasAnulados.filter(esFechaISO).slice(0, MAX_DIAS_ANULADOS);
       if (fechas.length > 0) diasAnulados = fechas;
     }
+
+    const territorios = normalizarTerritoriosAnulados(guardadas.territoriosAnulados);
+    if (territorios.length > 0) territoriosAnulados = territorios.map(String);
   } catch {
     // Si el almacenamiento no está disponible, se usan las condiciones por defecto.
   }
@@ -74,7 +84,14 @@ function cargarCondiciones(): void {
 
 function guardarCondiciones(): void {
   try {
-    localStorage.setItem(CLAVE_CONDICIONES, JSON.stringify({ condiciones, diasAnulados }));
+    localStorage.setItem(
+      CLAVE_CONDICIONES,
+      JSON.stringify({
+        condiciones,
+        diasAnulados,
+        territoriosAnulados: territoriosAnuladosActivos(),
+      }),
+    );
   } catch {
     // Si el almacenamiento no está disponible, los cambios solo duran la sesión.
   }
@@ -82,6 +99,10 @@ function guardarCondiciones(): void {
 
 function diasAnuladosActivos(): string[] {
   return [...new Set(diasAnulados.filter(esFechaISO))];
+}
+
+function territoriosAnuladosActivos(): number[] {
+  return normalizarTerritoriosAnulados(territoriosAnulados.map(Number));
 }
 
 function sincronizarSelects(): void {
@@ -130,6 +151,60 @@ function renderDiasAnulados(): void {
   agregarDiaBtn.disabled = maximoAlcanzado;
   agregarDiaBtn.classList.toggle('cursor-not-allowed', maximoAlcanzado);
   agregarDiaBtn.classList.toggle('opacity-50', maximoAlcanzado);
+}
+
+function opcionesTerritorios(): string {
+  return GRUPOS_TERRITORIOS.map((grupo) => {
+    const opciones = TERRITORIOS.filter(
+      (territorio) => territorio.numero >= grupo.desde && territorio.numero <= grupo.hasta,
+    )
+      .map((territorio) => `<option value="${territorio.numero}">T${territorio.numero}</option>`)
+      .join('');
+
+    return `<optgroup label="${escaparHtml(grupo.nombre)} (${grupo.desde}–${grupo.hasta})">${opciones}</optgroup>`;
+  }).join('');
+}
+
+function renderTerritoriosAnulados(): void {
+  const opciones = opcionesTerritorios();
+
+  territoriosAnuladosContenedor.innerHTML = territoriosAnulados
+    .map(
+      (_territorio, indice) => `
+        <div class="flex items-center gap-2">
+          <select
+            class="input min-w-0 flex-1"
+            data-territorio-anulado="${indice}"
+            aria-label="Territorio anulado ${indice + 1}"
+          >
+            <option value="">Selecciona un territorio</option>
+            ${opciones}
+          </select>
+          ${
+            territoriosAnulados.length > 1
+              ? `<button
+                  type="button"
+                  class="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-line text-lg leading-none text-ink-muted transition hover:bg-autumn/10 hover:text-autumn dark:hover:text-red-300"
+                  data-quitar-territorio="${indice}"
+                  aria-label="Quitar territorio anulado ${indice + 1}"
+                >×</button>`
+              : ''
+          }
+        </div>`,
+    )
+    .join('');
+
+  qsa<HTMLSelectElement>('[data-territorio-anulado]', territoriosAnuladosContenedor).forEach(
+    (select) => {
+      const indice = Number(select.dataset.territorioAnulado);
+      if (!Number.isNaN(indice)) select.value = territoriosAnulados[indice] ?? '';
+    },
+  );
+
+  const maximoAlcanzado = territoriosAnulados.length >= MAX_TERRITORIOS_ANULADOS;
+  agregarTerritorioBtn.disabled = maximoAlcanzado;
+  agregarTerritorioBtn.classList.toggle('cursor-not-allowed', maximoAlcanzado);
+  agregarTerritorioBtn.classList.toggle('opacity-50', maximoAlcanzado);
 }
 
 function mostrarAviso(texto: string): void {
@@ -204,9 +279,11 @@ function render(): void {
 
   const hoy = hoyISO();
   const anulados = diasAnuladosActivos();
+  const territoriosExcluidos = territoriosAnuladosActivos();
   const { sugerencias, ventana } = generarProgramacionAutomatica(visitas, condiciones, {
     hoy,
     diasAnulados: anulados,
+    territoriosAnulados: territoriosExcluidos,
   });
 
   const { dias, resumen: datos } = construirProgramacionMes(visitas, mes, hoy, {
@@ -243,6 +320,11 @@ function render(): void {
     ${
       datos.anulados > 0
         ? `<span class="badge bg-autumn/10 text-autumn ring-1 ring-autumn/30 dark:text-red-300 dark:ring-red-400/30">Anulados: ${datos.anulados}</span>`
+        : ''
+    }
+    ${
+      territoriosExcluidos.length > 0
+        ? `<span class="badge bg-surface-3 text-ink-muted ring-1 ring-line">Territorios anulados: ${territoriosExcluidos.length}</span>`
         : ''
     }
     <span class="badge bg-surface-3 text-ink-muted ring-1 ring-line">Salidas registradas: ${datos.totalSalidas}</span>
@@ -365,21 +447,85 @@ diasAnuladosContenedor.addEventListener('click', (evento) => {
   render();
 });
 
+agregarTerritorioBtn.addEventListener('click', () => {
+  if (territoriosAnulados.length >= MAX_TERRITORIOS_ANULADOS) return;
+
+  territoriosAnulados.push('');
+  guardarCondiciones();
+  renderTerritoriosAnulados();
+  qsa<HTMLSelectElement>('[data-territorio-anulado]', territoriosAnuladosContenedor)
+    .at(-1)
+    ?.focus();
+});
+
+territoriosAnuladosContenedor.addEventListener('change', (evento) => {
+  const select = (evento.target as HTMLElement).closest<HTMLSelectElement>(
+    '[data-territorio-anulado]',
+  );
+  if (!select) return;
+
+  const indice = Number(select.dataset.territorioAnulado);
+  if (Number.isNaN(indice) || indice < 0 || indice >= territoriosAnulados.length) return;
+
+  const numero = Number(select.value);
+  const repetido =
+    select.value !== '' &&
+    territoriosAnulados.some(
+      (valor, posicion) => posicion !== indice && Number(valor) === numero,
+    );
+
+  if (repetido) {
+    mostrarMensaje(territoriosAnuladosMensaje, 'Ese territorio ya está en la lista.', 'error');
+    select.value = territoriosAnulados[indice] ?? '';
+    return;
+  }
+
+  territoriosAnulados[indice] = select.value;
+  mostrarMensaje(territoriosAnuladosMensaje, '', 'info');
+  guardarCondiciones();
+  render();
+});
+
+territoriosAnuladosContenedor.addEventListener('click', (evento) => {
+  const boton = (evento.target as HTMLElement).closest<HTMLButtonElement>(
+    '[data-quitar-territorio]',
+  );
+  if (!boton) return;
+
+  const indice = Number(boton.dataset.quitarTerritorio);
+  if (Number.isNaN(indice) || indice < 0 || indice >= territoriosAnulados.length) return;
+
+  territoriosAnulados.splice(indice, 1);
+  if (territoriosAnulados.length === 0) territoriosAnulados = [''];
+  mostrarMensaje(territoriosAnuladosMensaje, '', 'info');
+  guardarCondiciones();
+  renderTerritoriosAnulados();
+  render();
+});
+
 restablecerBtn.addEventListener('click', () => {
-  if (!window.confirm('¿Restablecer todas las condiciones y los días anulados?')) return;
+  if (
+    !window.confirm('¿Restablecer las condiciones, los días y los territorios anulados?')
+  ) {
+    return;
+  }
 
   condiciones = condicionesVacias();
   diasAnulados = [''];
+  territoriosAnulados = [''];
   guardarCondiciones();
   sincronizarSelects();
   renderDiasAnulados();
+  renderTerritoriosAnulados();
   anuladosMensaje.textContent = '';
+  mostrarMensaje(territoriosAnuladosMensaje, '', 'info');
   render();
 });
 
 cargarCondiciones();
 sincronizarSelects();
 renderDiasAnulados();
+renderTerritoriosAnulados();
 mesInput.value = mesISO(new Date());
 mesInput.addEventListener('change', render);
 suscribir(renderEstado);

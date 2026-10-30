@@ -106,10 +106,12 @@ Con esas condiciones, la aplicación genera sugerencias para los próximos **2 m
 - Solo completa días desde hoy que todavía no tengan visitas registradas.
 - Dentro de cada zona elige el territorio con la última visita más antigua.
 - Rota los territorios de la zona para no repetirlos mientras haya otros disponibles.
-- Respeta los días anulados (hasta 6 fechas) y no genera nada después de la ventana.
+- Respeta los días anulados (hasta 6 fechas) y los territorios anulados (hasta 10) y no
+  genera nada después de la ventana.
 - Las sugerencias se muestran como **Programado auto** y no se guardan en Supabase; las
   visitas reales se siguen registrando desde la pestaña **Registro**.
-- Las condiciones y los días anulados se guardan en `localStorage` del navegador.
+- Las condiciones, los días anulados y los territorios anulados se guardan en
+  `localStorage` del navegador.
 
 ## CLIs
 
