@@ -21,6 +21,9 @@ pnpm-debug.log*
 # netlify local state
 .netlify/
 
+# supabase local state
+supabase/.temp/
+
 # local tooling
 .atl/
 

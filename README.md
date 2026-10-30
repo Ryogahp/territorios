@@ -94,6 +94,36 @@ PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
 
 El servidor valida fechas, turnos, territorios y que las cuadras existan en el territorio indicado.
 
+## CLIs
+
+El proyecto se gestiona con GitHub CLI, Netlify CLI y Supabase CLI.
+
+### GitHub
+
+```sh
+gh auth login
+git push origin main
+```
+
+### Netlify
+
+```sh
+netlify login
+netlify status
+netlify deploy --build --prod
+```
+
+### Supabase
+
+```sh
+supabase login
+supabase link --project-ref jbtgwqtnwymzisbqksuy
+supabase projects list
+```
+
+El proyecto de Supabase es `territorios` (`jbtgwqtnwymzisbqksuy`). El estado local de la CLI
+(`supabase/.temp/`) no se versiona.
+
 ## Despliegue
 
 El proyecto está configurado para Netlify (`output: 'server'` y adaptador `@astrojs/netlify`).
