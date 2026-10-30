@@ -4,7 +4,9 @@ import {
   formatearFecha,
   nombreDiaSemana,
   primerDiaMes,
+  rangoFechas,
   sumarMeses,
+  sumarMesesFecha,
   ultimoDiaMes,
 } from '../src/lib/fechas';
 
@@ -37,5 +39,21 @@ describe('utilidades de fechas', () => {
     expect(primerDiaMes('2026-10')).toBe('2026-10-01');
     expect(ultimoDiaMes('2026-10')).toBe('2026-10-31');
     expect(ultimoDiaMes('2026-02')).toBe('2026-02-28');
+  });
+
+  it('suma meses a una fecha completa ajustando el día', () => {
+    expect(sumarMesesFecha('2026-10-30', 2)).toBe('2026-12-30');
+    expect(sumarMesesFecha('2026-01-31', 1)).toBe('2026-02-28');
+    expect(sumarMesesFecha('2026-12-31', 2)).toBe('2027-02-28');
+  });
+
+  it('genera un rango de fechas inclusivo', () => {
+    expect(rangoFechas('2026-10-30', '2026-11-02')).toEqual([
+      '2026-10-30',
+      '2026-10-31',
+      '2026-11-01',
+      '2026-11-02',
+    ]);
+    expect(rangoFechas('2026-11-02', '2026-10-30')).toEqual([]);
   });
 });

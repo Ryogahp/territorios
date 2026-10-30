@@ -8,14 +8,16 @@ export interface GrupoTerritorios {
   hasta: number;
 }
 
-/** Zonas en las que se agrupan los territorios para la lista de pendientes. */
-export const GRUPOS_TERRITORIOS: GrupoTerritorios[] = [
+/** Zonas en las que se agrupan los territorios para pendientes y programación. */
+export const GRUPOS_TERRITORIOS = [
   { nombre: 'Irpavi', desde: 1, hasta: 17 },
-  { nombre: 'Boloni y Caliri', desde: 18, hasta: 28 },
+  { nombre: 'Bolonia y Caliri', desde: 18, hasta: 28 },
   { nombre: 'Bella Vista', desde: 29, hasta: 45 },
   { nombre: 'Irpavi 2', desde: 46, hasta: 49 },
   { nombre: 'Alto Irpavi', desde: 50, hasta: 59 },
-];
+] as const satisfies readonly GrupoTerritorios[];
+
+export type ZonaProgramacion = (typeof GRUPOS_TERRITORIOS)[number]['nombre'];
 
 export const TERRITORIOS: Territorio[] = [
   { numero: 1, letras: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'] },
@@ -92,3 +94,13 @@ export const TERRITORIOS: Territorio[] = [
 ];
 
 export const TERRITORIOS_POR_NUMERO = new Map(TERRITORIOS.map((territorio) => [territorio.numero, territorio]));
+
+/** Territorios que pertenecen a una zona de programación. */
+export function territoriosDeZona(zona: ZonaProgramacion): Territorio[] {
+  const grupo = GRUPOS_TERRITORIOS.find((item) => item.nombre === zona);
+  if (!grupo) return [];
+
+  return TERRITORIOS.filter(
+    (territorio) => territorio.numero >= grupo.desde && territorio.numero <= grupo.hasta,
+  );
+}

@@ -18,7 +18,7 @@ cuadras pendientes, revisar el plan mensual de asignación y controlar las salid
 | **Lista de territorios por visitar** | Estado de cada territorio por zonas: última visita, días transcurridos y cuadras faltantes. |
 | **S-13_S** | Plan de asignación por rondas: bloques por persona con fecha de asignación y de completado. |
 | **Control de salidas** | Resumen diario desde la primera visita, destacando los días sin salida registrada. |
-| **Programar el mes** | Tabla con todos los días del mes seleccionado, su día de la semana, su estado y las salidas registradas. |
+| **Programar el mes** | Tabla con todos los días del mes seleccionado, su estado y las salidas. Incluye condiciones semanales y programación automática para los próximos 2 meses. |
 
 ## Estructura del proyecto
 
@@ -39,7 +39,7 @@ src/
 │   ├── cuadras.ts               # Expansión y normalización de cuadras
 │   ├── fechas.ts                # Utilidades de fechas y meses
 │   ├── personas.ts              # Lista de personas
-│   ├── programar.ts             # Cálculo de días y resumen del mes
+│   ├── programar.ts             # Programación mensual y generación automática
 │   ├── tabs.ts                  # Definición única de las pestañas
 │   ├── territorios.ts           # Catálogo de territorios y grupos
 │   ├── types.ts                 # Tipos compartidos
@@ -93,6 +93,23 @@ PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
 - `DELETE /api/visitas` con `{ id }`
 
 El servidor valida fechas, turnos, territorios y que las cuadras existan en el territorio indicado.
+
+## Programación automática
+
+La pestaña **Programar el mes** incluye una tabla de **Condiciones** con dos filas
+(**Mañana** y **Tarde**) y una columna por día de la semana. Cada selector permite elegir
+una zona (`Irpavi`, `Bolonia y Caliri`, `Bella Vista`, `Irpavi 2`, `Alto Irpavi`) o
+`No salida`.
+
+Con esas condiciones, la aplicación genera sugerencias para los próximos **2 meses**:
+
+- Solo completa días desde hoy que todavía no tengan visitas registradas.
+- Dentro de cada zona elige el territorio con la última visita más antigua.
+- Rota los territorios de la zona para no repetirlos mientras haya otros disponibles.
+- Respeta los días anulados (hasta 6 fechas) y no genera nada después de la ventana.
+- Las sugerencias se muestran como **Programado auto** y no se guardan en Supabase; las
+  visitas reales se siguen registrando desde la pestaña **Registro**.
+- Las condiciones y los días anulados se guardan en `localStorage` del navegador.
 
 ## CLIs
 

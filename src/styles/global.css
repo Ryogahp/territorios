@@ -90,6 +90,16 @@ html.dark body {
            focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40;
   }
 
+  /* Selector compacto de las condiciones semanales */
+  .select-condicion {
+    @apply w-full cursor-pointer rounded-lg border border-line bg-surface px-2 py-1.5 text-xs text-ink shadow-sm transition
+           focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40;
+  }
+
+  .select-condicion[data-activa='true'] {
+    @apply border-brand/60 bg-mist/15 font-semibold text-brand;
+  }
+
   /* Botones */
   .btn-primary {
     @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-stone px-4 py-2.5 text-sm font-semibold

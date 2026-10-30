@@ -68,6 +68,32 @@ export function ultimoDiaMes(iso: string): string {
   return `${iso}-${pad2(new Date(anio, mes, 0).getDate())}`;
 }
 
+/** Suma (o resta) meses a una fecha completa, ajustando el día al último del mes. */
+export function sumarMesesFecha(iso: string, cantidad: number): string {
+  const [anio, mes, dia] = iso.split('-').map(Number);
+  if (!anio || !mes || !dia) return iso;
+
+  const fecha = new Date(anio, mes - 1 + cantidad, 1);
+  const ultimoDia = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
+  fecha.setDate(Math.min(dia, ultimoDia));
+  return isoFecha(fecha);
+}
+
+/** Todas las fechas ISO entre dos fechas, ambas incluidas. */
+export function rangoFechas(desde: string, hasta: string): string[] {
+  const inicio = new Date(`${desde}T00:00:00`);
+  const fin = new Date(`${hasta}T00:00:00`);
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime()) || inicio > fin) return [];
+
+  const fechas: string[] = [];
+  const actual = new Date(inicio);
+  while (actual <= fin) {
+    fechas.push(isoFecha(actual));
+    actual.setDate(actual.getDate() + 1);
+  }
+  return fechas;
+}
+
 /** Nombre legible de un mes `YYYY-MM`, por ejemplo `"Octubre 2026"`. */
 export function nombreMes(iso: string): string {
   const [anio, mes] = iso.split('-').map(Number);

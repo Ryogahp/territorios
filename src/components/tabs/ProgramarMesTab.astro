@@ -1,4 +1,18 @@
 ---
+import { GRUPOS_TERRITORIOS } from '../../lib/territorios';
+
+const DIAS = [
+  { nombre: 'Lunes', indice: 1 },
+  { nombre: 'Martes', indice: 2 },
+  { nombre: 'Miércoles', indice: 3 },
+  { nombre: 'Jueves', indice: 4 },
+  { nombre: 'Viernes', indice: 5 },
+  { nombre: 'Sábado', indice: 6 },
+  { nombre: 'Domingo', indice: 0 },
+];
+
+const TURNOS = ['Mañana', 'Tarde'] as const;
+const OPCIONES = ['No salida', ...GRUPOS_TERRITORIOS.map((grupo) => grupo.nombre)];
 ---
 
 <section id="contentProgramar" data-tab-panel="programar" class="tab-panel card hidden p-4 md:p-6">
@@ -14,7 +28,83 @@
       <input type="month" id="mesProgramar" class="input" />
     </label>
   </div>
+
+  <div class="mb-5 rounded-xl bg-surface-2 p-3 ring-1 ring-line md:p-4">
+    <div class="mb-3 flex flex-wrap items-start justify-between gap-2">
+      <div>
+        <h3 class="text-base font-semibold text-brand">Condiciones</h3>
+        <p class="text-xs text-ink-muted">
+          Elige la zona que se visita cada día y turno. La programación se genera automáticamente
+          para los próximos 2 meses y se prioriza el territorio con la última visita más antigua.
+          Solo se completan los días que aún no tienen salidas registradas.
+        </p>
+      </div>
+      <button id="restablecerCondiciones" type="button" class="btn-dashed">
+        Restablecer
+      </button>
+    </div>
+
+    <div class="overflow-x-auto rounded-lg ring-1 ring-line">
+      <table class="w-full min-w-[820px] border-collapse text-xs">
+        <thead>
+          <tr class="bg-stone text-white">
+            <th scope="col" class="px-2 py-2 text-left font-semibold">Turno</th>
+            {DIAS.map((dia) => (
+              <th scope="col" class="px-1.5 py-2 text-center font-semibold">{dia.nombre}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {TURNOS.map((turno) => (
+            <tr class="border-t border-line">
+              <th scope="row" class="bg-surface-3 px-2 py-2 text-left font-semibold whitespace-nowrap text-ink">
+                {turno}
+              </th>
+              {DIAS.map((dia) => (
+                <td class="px-1.5 py-2 align-top">
+                  <select
+                    class="select-condicion"
+                    data-condicion
+                    data-turno={turno}
+                    data-dia={dia.indice}
+                    aria-label={`${dia.nombre} por la ${turno === 'Mañana' ? 'mañana' : 'tarde'}`}
+                  >
+                    {OPCIONES.map((opcion) => (
+                      <option value={opcion}>{opcion}</option>
+                    ))}
+                  </select>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <p id="ventanaProgramar" class="mt-3 text-xs font-medium text-ink-muted"></p>
+
+    <div class="mt-4 border-t border-line pt-3">
+      <div class="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h4 class="text-sm font-semibold text-ink">Días anulados</h4>
+          <p class="text-xs text-ink-muted">
+            En estas fechas no se generará ninguna salida automática. Puedes añadir hasta 6 días.
+          </p>
+        </div>
+        <button id="agregarDiaAnulado" type="button" class="btn-dashed">
+          + Añadir día
+        </button>
+      </div>
+      <div id="diasAnulados" class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"></div>
+      <p id="anuladosMessage" class="mt-2 text-xs font-medium" aria-live="polite"></p>
+    </div>
+  </div>
+
   <p id="programarMessage" class="mb-3 text-sm font-medium" aria-live="polite"></p>
+  <p
+    id="avisoProgramar"
+    class="mb-3 hidden rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/30"
+  ></p>
   <div id="resumenProgramar" class="mb-3 flex flex-wrap gap-2"></div>
   <div id="programarContainer" class="overflow-x-auto"></div>
 </section>
